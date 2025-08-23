@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserCheck, GraduationCap, Users, LogOut, Loader } from 'lucide-react';
 import { authAPI, authStorage } from './services/api';
+import TeacherDashboard from './components/TeacherDashboard';
 
 const loadGoogleScript = () => {
   return new Promise((resolve) => {
@@ -162,49 +163,41 @@ function App() {
 
   // Fully authenticated user with role
   if (user && user.role) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md text-center">
-          <div className="mb-6">
-            <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-4 border-4 border-green-100">
-              <img 
-                src={user.profilePicture} 
-                alt={user.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=3b82f6&color=fff`;
-                }}
-              />
+    // Route to appropriate dashboard based on role
+    if (user.role === 'teacher') {
+      return <TeacherDashboard user={user} onLogout={handleLogout} />;
+    }
+    
+    if (user.role === 'student') {
+      // Student dashboard will be implemented next
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md text-center">
+            <div className="mb-6">
+              <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-4 border-4 border-green-100">
+                <img 
+                  src={user.profilePicture} 
+                  alt={user.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=3b82f6&color=fff`;
+                  }}
+                />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-800">Student Dashboard</h1>
+              <p className="text-gray-600 mt-2">🚧 Coming Soon!</p>
             </div>
-            <h1 className="text-2xl font-bold text-gray-800">Welcome to Qroll!</h1>
-            <p className="text-gray-600 mt-2">🎯 Ready to track attendance</p>
-          </div>
 
-          <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <p className="text-sm text-gray-600">Logged in as:</p>
-            <p className="font-semibold text-gray-800">{user.name}</p>
-            <p className="text-sm text-gray-600">{user.email}</p>
-            <div className="flex items-center justify-center gap-2 mt-2">
-              <span className={`text-xs px-2 py-1 rounded-full ${
-                user.role === 'teacher' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
-              }`}>
-                {user.role === 'teacher' ? '👩‍🏫 Teacher' : '👨‍🎓 Student'}
-              </span>
+            <div className="bg-gray-50 rounded-lg p-4 mb-6">
+              <p className="text-sm text-gray-600">Logged in as:</p>
+              <p className="font-semibold text-gray-800">{user.name}</p>
+              <p className="text-sm text-gray-600">{user.email}</p>
+              <div className="flex items-center justify-center gap-2 mt-2">
+                <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">
+                  👨‍🎓 Student
+                </span>
+              </div>
             </div>
-          </div>
-
-          <div className="space-y-3">
-            {user.role === 'teacher' && (
-              <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors">
-                📋 Go to Teacher Dashboard →
-              </button>
-            )}
-            
-            {user.role === 'student' && (
-              <button className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors">
-                🎓 Go to Student Dashboard →
-              </button>
-            )}
 
             <button 
               onClick={handleLogout}
@@ -219,18 +212,9 @@ function App() {
               Logout
             </button>
           </div>
-
-          <div className="text-center mt-6">
-            <p className="text-xs text-gray-500">
-              ✅ Connected to MongoDB • JWT Auth Active
-            </p>
-            <p className="text-xs text-gray-400 mt-1">
-              API: {import.meta.env.VITE_API_URL}
-            </p>
-          </div>
         </div>
-      </div>
-    );
+      );
+    }
   }
 
   // User logged in but no role selected
