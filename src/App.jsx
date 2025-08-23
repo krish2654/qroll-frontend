@@ -1,3 +1,4 @@
+// Fixed version of App.jsx with Google Auth improvements
 import React, { useState, useEffect } from 'react';
 import { UserCheck, GraduationCap, Users, LogOut, Loader } from 'lucide-react';
 import { authAPI, authStorage } from './services/api';
@@ -57,6 +58,7 @@ function App() {
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
         callback: handleGoogleResponse,
         auto_select: false,
+        cancel_on_tap_outside: false,
       });
 
       setTimeout(() => {
@@ -65,9 +67,10 @@ function App() {
           window.google.accounts.id.renderButton(buttonElement, {
             theme: 'outline',
             size: 'large',
-            width: '100%',
+            width: 320, // Fixed width instead of 100%
             text: 'continue_with',
             shape: 'rectangular',
+            logo_alignment: 'left'
           });
         }
       }, 100);
@@ -326,14 +329,13 @@ function App() {
             </label>
             
             {googleLoaded ? (
-              <div className="relative">
+              <div className="relative flex justify-center">
                 <div 
                   id="google-signin-button" 
-                  className="w-full"
                   style={{ display: authLoading ? 'none' : 'block' }}
                 />
                 {authLoading && (
-                  <div className="w-full bg-white border-2 border-gray-300 text-gray-700 font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-3">
+                  <div className="w-80 bg-white border-2 border-gray-300 text-gray-700 font-medium py-3 px-4 rounded-lg flex items-center justify-center gap-3">
                     <Loader className="w-5 h-5 animate-spin" />
                     Signing in...
                   </div>
