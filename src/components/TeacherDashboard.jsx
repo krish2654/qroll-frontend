@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   Users, 
@@ -30,25 +30,29 @@ import {
   Globe,
   Shield,
   Play,
-  Square,
-  FileText,
-  Upload,
+  Pause,
   Download,
-  Share2,
+  Upload,
+  FileText,
+  Image,
+  Video,
+  Link,
   Eye,
-  PieChart,
   Calendar as CalendarIcon,
-  UserCheck,
-  Timer,
-  Wifi,
-  WifiOff,
-  Maximize2,
-  Minimize2
+  Monitor
 } from 'lucide-react';
-import QRCode from 'qrcode';
 
-const TeachersDashboard = ({ user, onLogout }) => {
-  // State for class groups
+const TeachersDashboard = () => {
+  // Mock user data - would come from props in real app
+  const [user] = useState({
+    name: "Dr. Sarah Wilson",
+    email: "sarah.wilson@college.edu",
+    profilePicture: "https://ui-avatars.com/api/?name=Sarah+Wilson&background=3b82f6&color=fff",
+    role: "teacher",
+    department: "Computer Science"
+  });
+
+  // State for class groups with lectures
   const [classGroups, setClassGroups] = useState([
     {
       _id: "1",
@@ -64,11 +68,37 @@ const TeachersDashboard = ({ user, onLogout }) => {
           lastSession: "2024-08-22",
           attendanceRate: 89,
           isActive: true,
-          activeLecture: null, // Will hold active lecture data
-          files: [
-            { id: 1, name: "DSA Chapter 1 - Introduction.pdf", size: "2.4 MB", uploadedAt: "2024-08-20", downloads: 23 },
-            { id: 2, name: "Sorting Algorithms Notes.docx", size: "1.8 MB", uploadedAt: "2024-08-18", downloads: 31 }
-          ]
+          lectures: [
+            {
+              _id: "l1",
+              title: "Introduction to Trees",
+              date: "2024-08-23",
+              startTime: "09:00",
+              endTime: "10:30",
+              isActive: true,
+              qrCode: "QR_DSA_TREES_20240823",
+              attendees: 42,
+              files: [
+                { name: "Trees_Notes.pdf", type: "pdf", size: "2.4 MB", uploadedAt: "2024-08-22" },
+                { name: "Tree_Examples.jpg", type: "image", size: "1.2 MB", uploadedAt: "2024-08-22" }
+              ]
+            },
+            {
+              _id: "l2",
+              title: "Binary Search Trees",
+              date: "2024-08-21",
+              startTime: "09:00",
+              endTime: "10:30",
+              isActive: false,
+              qrCode: "QR_DSA_BST_20240821",
+              attendees: 40,
+              files: [
+                { name: "BST_Implementation.cpp", type: "code", size: "856 bytes", uploadedAt: "2024-08-21" }
+              ]
+            }
+          ],
+          totalLectures: 15,
+          completedLectures: 2
         },
         {
           _id: "c2", 
@@ -78,10 +108,24 @@ const TeachersDashboard = ({ user, onLogout }) => {
           lastSession: "2024-08-21",
           attendanceRate: 92,
           isActive: true,
-          activeLecture: null,
-          files: [
-            { id: 3, name: "ER Diagrams Tutorial.pdf", size: "3.1 MB", uploadedAt: "2024-08-19", downloads: 28 }
-          ]
+          lectures: [
+            {
+              _id: "l3",
+              title: "SQL Queries",
+              date: "2024-08-22",
+              startTime: "11:00",
+              endTime: "12:30",
+              isActive: false,
+              qrCode: "QR_DBMS_SQL_20240822",
+              attendees: 39,
+              files: [
+                { name: "SQL_Queries.sql", type: "code", size: "1.1 KB", uploadedAt: "2024-08-22" },
+                { name: "Database_Schema.png", type: "image", size: "890 KB", uploadedAt: "2024-08-22" }
+              ]
+            }
+          ],
+          totalLectures: 12,
+          completedLectures: 1
         }
       ],
       settings: {
@@ -91,6 +135,33 @@ const TeachersDashboard = ({ user, onLogout }) => {
       },
       totalStudents: 45,
       createdAt: "2024-08-01"
+    },
+    {
+      _id: "2",
+      name: "SY.IT", 
+      description: "Second Year Information Technology",
+      groupCode: "SYIT24",
+      classes: [
+        {
+          _id: "c3",
+          subject: "Web Development",
+          studentCount: 38,
+          schedule: { days: ["Monday", "Wednesday"], startTime: "14:00", endTime: "15:30", room: "Lab 2" },
+          lastSession: "2024-08-22",
+          attendanceRate: 85,
+          isActive: true,
+          lectures: [],
+          totalLectures: 10,
+          completedLectures: 0
+        }
+      ],
+      settings: {
+        joinPermissions: "anywhere",
+        allowBroadcast: true, 
+        autoApprove: false
+      },
+      totalStudents: 38,
+      createdAt: "2024-07-15"
     }
   ]);
 
@@ -99,16 +170,11 @@ const TeachersDashboard = ({ user, onLogout }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateGroupForm, setShowCreateGroupForm] = useState(false);
   const [showManageGroup, setShowManageGroup] = useState(null);
-  const [showLectureModal, setShowLectureModal] = useState(null);
-  const [showAnalytics, setShowAnalytics] = useState(null);
-  const [showFileManager, setShowFileManager] = useState(null);
+  const [showSubjectDetails, setShowSubjectDetails] = useState(null);
   const [notifications, setNotifications] = useState([
     { id: 1, message: "45 students joined TY.IT group", time: "2 hours ago", type: "info" },
     { id: 2, message: "Web Development class starts in 30 mins", time: "30 mins ago", type: "warning" }
   ]);
-
-  // QR Code refresh interval
-  const qrIntervals = useRef(new Map());
 
   // Calculate dashboard statistics
   const totalGroups = classGroups.length;
@@ -141,133 +207,15 @@ const TeachersDashboard = ({ user, onLogout }) => {
     }, ...prev.slice(0, 4)]);
   };
 
-  // Start lecture function
-  const startLecture = async (groupId, classId) => {
-    const lectureId = `lecture_${Date.now()}`;
-    const lecture = {
-      id: lectureId,
-      startTime: new Date(),
-      qrCode: null,
-      qrToken: `${lectureId}_${Math.random().toString(36).substr(2, 9)}`,
-      studentsJoined: 0,
-      isActive: true
-    };
-
-    // Generate QR code
-    try {
-      const qrCodeUrl = await QRCode.toDataURL(
-        `${import.meta.env.VITE_API_URL}/join-lecture/${lecture.qrToken}`,
-        { width: 200, margin: 2 }
-      );
-      lecture.qrCode = qrCodeUrl;
-    } catch (error) {
-      console.error('QR code generation failed:', error);
-    }
-
-    // Update class with active lecture
-    setClassGroups(prev => prev.map(group => 
-      group._id === groupId 
-        ? {
-            ...group,
-            classes: group.classes.map(cls => 
-              cls._id === classId 
-                ? { ...cls, activeLecture: lecture }
-                : cls
-            )
-          }
-        : group
-    ));
-
-    // Set up QR refresh interval
-    const interval = setInterval(() => {
-      refreshQRCode(groupId, classId, lectureId);
-    }, 5000);
-    qrIntervals.current.set(lectureId, interval);
-
-    setNotifications(prev => [{
-      id: Date.now(),
-      message: "Lecture started successfully! QR code is now active.",
-      time: "now",
-      type: "success"
-    }, ...prev.slice(0, 4)]);
+  const generateQRCode = (lectureId, subject) => {
+    // In real app, this would generate actual QR code and return join URL
+    const joinUrl = `https://qroll.duckdns.org/join-lecture/${lectureId}`;
+    return joinUrl;
   };
 
-  // Stop lecture function
-  const stopLecture = (groupId, classId) => {
-    setClassGroups(prev => prev.map(group => 
-      group._id === groupId 
-        ? {
-            ...group,
-            classes: group.classes.map(cls => 
-              cls._id === classId 
-                ? { ...cls, activeLecture: null }
-                : cls
-            )
-          }
-        : group
-    ));
-
-    // Clear QR refresh interval
-    const group = classGroups.find(g => g._id === groupId);
-    const cls = group?.classes.find(c => c._id === classId);
-    if (cls?.activeLecture?.id) {
-      const interval = qrIntervals.current.get(cls.activeLecture.id);
-      if (interval) {
-        clearInterval(interval);
-        qrIntervals.current.delete(cls.activeLecture.id);
-      }
-    }
-
-    setNotifications(prev => [{
-      id: Date.now(),
-      message: "Lecture ended. Attendance data saved.",
-      time: "now",
-      type: "info"
-    }, ...prev.slice(0, 4)]);
+  const handleLogout = () => {
+    console.log("Logging out...");
   };
-
-  // Refresh QR code
-  const refreshQRCode = async (groupId, classId, lectureId) => {
-    const newToken = `${lectureId}_${Math.random().toString(36).substr(2, 9)}`;
-    try {
-      const qrCodeUrl = await QRCode.toDataURL(
-        `${import.meta.env.VITE_API_URL}/join-lecture/${newToken}`,
-        { width: 200, margin: 2 }
-      );
-
-      setClassGroups(prev => prev.map(group => 
-        group._id === groupId 
-          ? {
-              ...group,
-              classes: group.classes.map(cls => 
-                cls._id === classId && cls.activeLecture?.id === lectureId
-                  ? { 
-                      ...cls, 
-                      activeLecture: { 
-                        ...cls.activeLecture, 
-                        qrToken: newToken,
-                        qrCode: qrCodeUrl 
-                      }
-                    }
-                  : cls
-              )
-            }
-          : group
-      ));
-    } catch (error) {
-      console.error('QR refresh failed:', error);
-    }
-  };
-
-  // Cleanup intervals on unmount
-  useEffect(() => {
-    return () => {
-      qrIntervals.current.forEach((interval) => {
-        clearInterval(interval);
-      });
-      qrIntervals.current.clear();
-    };
-  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -314,10 +262,10 @@ const TeachersDashboard = ({ user, onLogout }) => {
                 />
                 <div className="hidden sm:block">
                   <p className="text-sm font-medium text-gray-700">{user.name}</p>
-                  <p className="text-xs text-gray-500">Teacher</p>
+                  <p className="text-xs text-gray-500">{user.department}</p>
                 </div>
                 <button
-                  onClick={onLogout}
+                  onClick={handleLogout}
                   className="p-2 text-gray-400 hover:text-gray-600"
                 >
                   <LogOut className="h-4 w-4" />
@@ -334,7 +282,7 @@ const TeachersDashboard = ({ user, onLogout }) => {
           {/* Page Header */}
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-gray-900">Teachers Dashboard</h2>
-            <p className="text-gray-600 mt-2">Manage your class groups, start lectures, and track attendance</p>
+            <p className="text-gray-600 mt-2">Manage your class groups and track attendance across multiple subjects</p>
           </div>
 
           {/* Error Display */}
@@ -516,71 +464,38 @@ const TeachersDashboard = ({ user, onLogout }) => {
                           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                             {group.classes.map((cls) => (
                               <div key={cls._id} className="bg-gray-50 rounded-lg p-3">
-                                <div className="flex items-start justify-between">
+                                <div className="flex items-center justify-between">
                                   <div className="flex-1 min-w-0">
-                                    <div className="flex items-center space-x-2 mb-2">
-                                      <h5 className="text-sm font-medium text-gray-900 truncate">{cls.subject}</h5>
-                                      {cls.activeLecture && (
-                                        <div className="flex items-center">
-                                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                          <span className="text-xs text-green-600 ml-1">Live</span>
-                                        </div>
+                                    <h5 className="text-sm font-medium text-gray-900 truncate">{cls.subject}</h5>
+                                    <div className="flex items-center space-x-3 mt-1">
+                                      <span className="text-xs text-gray-500">{cls.studentCount} students</span>
+                                      <span className="text-xs text-gray-500">
+                                        {cls.attendanceRate}% attendance
+                                      </span>
+                                      {cls.schedule.room && (
+                                        <span className="text-xs text-gray-500">{cls.schedule.room}</span>
                                       )}
                                     </div>
-                                    <div className="flex items-center space-x-3 text-xs text-gray-500">
-                                      <span>{cls.studentCount} students</span>
-                                      <span>{cls.attendanceRate}% attendance</span>
-                                      {cls.schedule.room && <span>{cls.schedule.room}</span>}
+                                    <div className="flex items-center space-x-2 mt-1">
+                                      <span className="text-xs text-blue-600">
+                                        {cls.completedLectures || 0}/{cls.totalLectures || 0} lectures
+                                      </span>
                                     </div>
                                   </div>
                                   <div className="flex items-center space-x-1">
-                                    {/* Start/Stop Lecture Button */}
-                                    {cls.activeLecture ? (
-                                      <button 
-                                        onClick={() => stopLecture(group._id, cls._id)}
-                                        className="p-1 text-red-600 hover:text-red-700 rounded hover:bg-red-50"
-                                        title="Stop Lecture"
-                                      >
-                                        <Square className="h-4 w-4" />
-                                      </button>
-                                    ) : (
-                                      <button 
-                                        onClick={() => startLecture(group._id, cls._id)}
-                                        className="p-1 text-green-600 hover:text-green-700 rounded hover:bg-green-50"
-                                        title="Start Lecture"
-                                      >
-                                        <Play className="h-4 w-4" />
-                                      </button>
-                                    )}
-                                    
-                                    {/* QR Code Button */}
                                     <button 
-                                      onClick={() => setShowLectureModal({group, class: cls})}
-                                      className={`p-1 rounded hover:bg-blue-50 ${
-                                        cls.activeLecture ? 'text-blue-600 hover:text-blue-700' : 'text-gray-400'
-                                      }`}
-                                      title="View QR Code"
-                                      disabled={!cls.activeLecture}
+                                      onClick={() => setShowSubjectDetails({...cls, groupId: group._id, groupName: group.name})}
+                                      className="p-1 text-gray-400 hover:text-blue-600 rounded"
+                                      title="Manage Lectures"
                                     >
-                                      <QrCode className="h-4 w-4" />
+                                      <Calendar className="h-4 w-4" />
                                     </button>
-                                    
-                                    {/* Analytics Button */}
                                     <button 
-                                      onClick={() => setShowAnalytics({group, class: cls})}
-                                      className="p-1 text-gray-400 hover:text-purple-600 rounded hover:bg-purple-50"
+                                      onClick={() => setShowSubjectDetails({...cls, groupId: group._id, groupName: group.name, showAnalytics: true})}
+                                      className="p-1 text-gray-400 hover:text-green-600 rounded"
                                       title="View Analytics"
                                     >
                                       <BarChart3 className="h-4 w-4" />
-                                    </button>
-
-                                    {/* File Manager Button */}
-                                    <button 
-                                      onClick={() => setShowFileManager({group, class: cls})}
-                                      className="p-1 text-gray-400 hover:text-orange-600 rounded hover:bg-orange-50"
-                                      title="Manage Files"
-                                    >
-                                      <FileText className="h-4 w-4" />
                                     </button>
                                   </div>
                                 </div>
@@ -613,7 +528,7 @@ const TeachersDashboard = ({ user, onLogout }) => {
         </div>
       </main>
 
-      {/* Modals */}
+      {/* Create Group Modal */}
       {showCreateGroupForm && (
         <CreateGroupModal
           onClose={() => setShowCreateGroupForm(false)}
@@ -621,6 +536,7 @@ const TeachersDashboard = ({ user, onLogout }) => {
         />
       )}
 
+      {/* Manage Group Modal */}
       {showManageGroup && (
         <ManageGroupModal
           group={showManageGroup}
@@ -631,566 +547,32 @@ const TeachersDashboard = ({ user, onLogout }) => {
             ));
             setShowManageGroup(null);
           }}
+          copyGroupCode={copyGroupCode}
         />
       )}
 
-      {showLectureModal && (
-        <LectureQRModal
-          group={showLectureModal.group}
-          classData={showLectureModal.class}
-          onClose={() => setShowLectureModal(null)}
-        />
-      )}
-
-      {showAnalytics && (
-        <AnalyticsModal
-          group={showAnalytics.group}
-          classData={showAnalytics.class}
-          onClose={() => setShowAnalytics(null)}
-        />
-      )}
-
-      {showFileManager && (
-        <FileManagerModal
-          group={showFileManager.group}
-          classData={showFileManager.class}
-          onClose={() => setShowFileManager(null)}
-          onFilesUpdated={(groupId, classId, newFiles) => {
-            setClassGroups(prev => prev.map(group => 
-              group._id === groupId 
-                ? {
-                    ...group,
-                    classes: group.classes.map(cls => 
-                      cls._id === classId 
-                        ? { ...cls, files: newFiles }
-                        : cls
-                    )
-                  }
-                : group
-            ));
+      {/* Subject Details Modal */}
+      {showSubjectDetails && (
+        <SubjectDetailsModal
+          subject={showSubjectDetails}
+          onClose={() => setShowSubjectDetails(null)}
+          onSubjectUpdated={(updatedSubject) => {
+            setClassGroups(prev => prev.map(group => ({
+              ...group,
+              classes: group.classes.map(cls => 
+                cls._id === updatedSubject._id ? updatedSubject : cls
+              )
+            })));
+            setShowSubjectDetails(null);
           }}
+          generateQRCode={generateQRCode}
         />
       )}
     </div>
   );
 };
 
-// Lecture QR Modal Component
-const LectureQRModal = ({ group, classData, onClose }) => {
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  if (!classData.activeLecture) {
-    return null;
-  }
-
-  const shareQR = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: `Join ${classData.subject} Lecture`,
-        text: `Join the live lecture for ${classData.subject}`,
-        url: `${import.meta.env.VITE_API_URL}/join-lecture/${classData.activeLecture.qrToken}`
-      });
-    } else {
-      navigator.clipboard.writeText(`${import.meta.env.VITE_API_URL}/join-lecture/${classData.activeLecture.qrToken}`);
-      alert('Link copied to clipboard!');
-    }
-  };
-
-  return (
-    <div className={`fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 ${isFullscreen ? 'bg-black bg-opacity-80' : ''}`}>
-      <div className={`relative mx-auto p-0 border shadow-lg rounded-lg bg-white ${
-        isFullscreen 
-          ? 'top-10 w-11/12 max-w-2xl' 
-          : 'top-20 w-11/12 max-w-lg'
-      }`}>
-        {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b">
-          <div>
-            <h3 className="text-lg font-medium text-gray-900">Live Lecture QR Code</h3>
-            <p className="text-sm text-gray-500 mt-1">{classData.subject} - {group.name}</p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setIsFullscreen(!isFullscreen)}
-              className="p-2 text-gray-400 hover:text-gray-600"
-            >
-              {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
-            </button>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-              <X className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
-
-        {/* QR Code Display */}
-        <div className="p-6">
-          <div className="text-center">
-            {/* Live Status */}
-            <div className="flex items-center justify-center mb-4">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse mr-2"></div>
-              <span className="text-green-600 font-medium">Lecture is Live</span>
-            </div>
-
-            {/* QR Code */}
-            <div className="bg-white p-6 rounded-xl border-2 border-gray-200 inline-block mb-4">
-              {classData.activeLecture.qrCode ? (
-                <img 
-                  src={classData.activeLecture.qrCode} 
-                  alt="QR Code" 
-                  className={`mx-auto ${isFullscreen ? 'w-64 h-64' : 'w-48 h-48'}`}
-                />
-              ) : (
-                <div className={`${isFullscreen ? 'w-64 h-64' : 'w-48 h-48'} bg-gray-100 rounded-lg flex items-center justify-center`}>
-                  <Loader className="w-8 h-8 animate-spin text-gray-400" />
-                </div>
-              )}
-            </div>
-
-            <p className="text-sm text-gray-600 mb-4">
-              Students can scan this QR code to join the lecture
-            </p>
-            <p className="text-xs text-blue-600 mb-6">
-              QR code refreshes every 5 seconds for security
-            </p>
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-blue-50 rounded-lg p-3">
-                <div className="text-2xl font-bold text-blue-600">{classData.activeLecture.studentsJoined}</div>
-                <div className="text-sm text-blue-700">Students Joined</div>
-              </div>
-              <div className="bg-green-50 rounded-lg p-3">
-                <div className="text-2xl font-bold text-green-600">
-                  {Math.floor((Date.now() - new Date(classData.activeLecture.startTime)) / 60000)}m
-                </div>
-                <div className="text-sm text-green-700">Duration</div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex justify-center space-x-3">
-              <button
-                onClick={shareQR}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-100 hover:bg-blue-200"
-              >
-                <Share2 className="w-4 h-4 mr-2" />
-                Share Link
-              </button>
-              <button
-                onClick={() => {
-                  const link = document.createElement('a');
-                  link.download = `${classData.subject}_QR.png`;
-                  link.href = classData.activeLecture.qrCode;
-                  link.click();
-                }}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Download QR
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Analytics Modal Component
-const AnalyticsModal = ({ group, classData, onClose }) => {
-  const [timeRange, setTimeRange] = useState('week');
-  
-  // Mock analytics data
-  const analyticsData = {
-    attendanceByDate: [
-      { date: '2024-08-19', present: 38, absent: 7, total: 45 },
-      { date: '2024-08-20', present: 42, absent: 3, total: 45 },
-      { date: '2024-08-21', present: 40, absent: 5, total: 45 },
-      { date: '2024-08-22', present: 41, absent: 4, total: 45 },
-      { date: '2024-08-23', present: 39, absent: 6, total: 45 }
-    ],
-    topAttendees: [
-      { name: 'Aman Sharma', attendance: 95, avatar: 'AS' },
-      { name: 'Priya Patel', attendance: 92, avatar: 'PP' },
-      { name: 'Rahul Singh', attendance: 90, avatar: 'RS' }
-    ],
-    lowAttendees: [
-      { name: 'Vikash Kumar', attendance: 65, avatar: 'VK' },
-      { name: 'Sneha Gupta', attendance: 68, avatar: 'SG' },
-      { name: 'Arjun Mehta', attendance: 70, avatar: 'AM' }
-    ]
-  };
-
-  return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-10 mx-auto p-0 border w-11/12 max-w-4xl shadow-lg rounded-lg bg-white">
-        {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b">
-          <div>
-            <h3 className="text-lg font-medium text-gray-900">Analytics Dashboard</h3>
-            <p className="text-sm text-gray-500 mt-1">{classData.subject} - {group.name}</p>
-          </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6">
-          {/* Time Range Selector */}
-          <div className="flex justify-between items-center mb-6">
-            <h4 className="text-md font-medium text-gray-900">Attendance Analytics</h4>
-            <select 
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value)}
-              className="border border-gray-300 rounded-md px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="week">Last 7 days</option>
-              <option value="month">Last 30 days</option>
-              <option value="semester">This semester</option>
-            </select>
-          </div>
-
-          {/* Summary Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-blue-50 rounded-lg p-4">
-              <div className="text-2xl font-bold text-blue-600">{classData.attendanceRate}%</div>
-              <div className="text-sm text-blue-700">Overall Attendance</div>
-            </div>
-            <div className="bg-green-50 rounded-lg p-4">
-              <div className="text-2xl font-bold text-green-600">
-                {Math.round(analyticsData.attendanceByDate.reduce((sum, day) => sum + day.present, 0) / analyticsData.attendanceByDate.length)}
-              </div>
-              <div className="text-sm text-green-700">Avg Daily Present</div>
-            </div>
-            <div className="bg-yellow-50 rounded-lg p-4">
-              <div className="text-2xl font-bold text-yellow-600">
-                {analyticsData.attendanceByDate.length}
-              </div>
-              <div className="text-sm text-yellow-700">Total Sessions</div>
-            </div>
-            <div className="bg-purple-50 rounded-lg p-4">
-              <div className="text-2xl font-bold text-purple-600">
-                {analyticsData.lowAttendees.length}
-              </div>
-              <div className="text-sm text-purple-700">At Risk Students</div>
-            </div>
-          </div>
-
-          {/* Charts and Lists */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Attendance Chart */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h5 className="font-medium text-gray-900 mb-4">Daily Attendance Trend</h5>
-              <div className="space-y-3">
-                {analyticsData.attendanceByDate.map((day, index) => (
-                  <div key={index} className="flex items-center">
-                    <div className="w-20 text-sm text-gray-600">
-                      {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </div>
-                    <div className="flex-1 mx-3">
-                      <div className="bg-gray-200 rounded-full h-4 relative">
-                        <div 
-                          className="bg-green-500 h-4 rounded-full" 
-                          style={{ width: `${(day.present / day.total) * 100}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    <div className="text-sm font-medium text-gray-700">
-                      {day.present}/{day.total}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Top Performers */}
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h5 className="font-medium text-gray-900 mb-4">Top Performers</h5>
-              <div className="space-y-3">
-                {analyticsData.topAttendees.map((student, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-xs font-medium text-green-700">
-                        {student.avatar}
-                      </div>
-                      <span className="ml-3 text-sm font-medium text-gray-900">{student.name}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="text-sm font-medium text-green-600">{student.attendance}%</span>
-                      <Star className="w-4 h-4 text-yellow-400 ml-1" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* At Risk Students */}
-            <div className="bg-red-50 rounded-lg p-4">
-              <h5 className="font-medium text-gray-900 mb-4">At Risk Students</h5>
-              <div className="space-y-3">
-                {analyticsData.lowAttendees.map((student, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center text-xs font-medium text-red-700">
-                        {student.avatar}
-                      </div>
-                      <span className="ml-3 text-sm font-medium text-gray-900">{student.name}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <span className="text-sm font-medium text-red-600">{student.attendance}%</span>
-                      <AlertCircle className="w-4 h-4 text-red-400 ml-1" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="bg-blue-50 rounded-lg p-4">
-              <h5 className="font-medium text-gray-900 mb-4">Quick Actions</h5>
-              <div className="space-y-2">
-                <button className="w-full text-left px-3 py-2 text-sm bg-white rounded-md hover:bg-gray-100 flex items-center">
-                  <Download className="w-4 h-4 mr-2 text-blue-600" />
-                  Export Attendance Report
-                </button>
-                <button className="w-full text-left px-3 py-2 text-sm bg-white rounded-md hover:bg-gray-100 flex items-center">
-                  <MessageSquare className="w-4 h-4 mr-2 text-green-600" />
-                  Send Reminder to Low Attendance
-                </button>
-                <button className="w-full text-left px-3 py-2 text-sm bg-white rounded-md hover:bg-gray-100 flex items-center">
-                  <PieChart className="w-4 h-4 mr-2 text-purple-600" />
-                  Generate Detailed Report
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-end space-x-3 px-6 py-4 border-t bg-gray-50">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-          >
-            Close
-          </button>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-            Export Data
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// File Manager Modal Component
-const FileManagerModal = ({ group, classData, onClose, onFilesUpdated }) => {
-  const [files, setFiles] = useState(classData.files || []);
-  const [uploading, setUploading] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
-  const fileInputRef = useRef(null);
-
-  const handleFileUpload = async (uploadedFiles) => {
-    setUploading(true);
-    
-    // Simulate file upload
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const newFiles = Array.from(uploadedFiles).map(file => ({
-      id: Date.now() + Math.random(),
-      name: file.name,
-      size: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
-      uploadedAt: new Date().toISOString().split('T')[0],
-      downloads: 0,
-      type: file.type
-    }));
-
-    const updatedFiles = [...files, ...newFiles];
-    setFiles(updatedFiles);
-    onFilesUpdated(group._id, classData._id, updatedFiles);
-    setUploading(false);
-  };
-
-  const handleDelete = (fileId) => {
-    const updatedFiles = files.filter(file => file.id !== fileId);
-    setFiles(updatedFiles);
-    onFilesUpdated(group._id, classData._id, updatedFiles);
-  };
-
-  const handleDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileUpload(e.dataTransfer.files);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-10 mx-auto p-0 border w-11/12 max-w-4xl shadow-lg rounded-lg bg-white">
-        {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b">
-          <div>
-            <h3 className="text-lg font-medium text-gray-900">File Manager</h3>
-            <p className="text-sm text-gray-500 mt-1">{classData.subject} - {group.name}</p>
-          </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6">
-          {/* Upload Area */}
-          <div 
-            className={`border-2 border-dashed rounded-lg p-8 text-center mb-6 transition-colors ${
-              dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-            }`}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-          >
-            <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h4 className="text-lg font-medium text-gray-900 mb-2">Upload Course Materials</h4>
-            <p className="text-gray-600 mb-4">Drag and drop files here, or click to browse</p>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-100 hover:bg-blue-200 disabled:opacity-50"
-            >
-              {uploading ? (
-                <>
-                  <Loader className="w-4 h-4 animate-spin mr-2" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Choose Files
-                </>
-              )}
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              onChange={(e) => e.target.files && handleFileUpload(e.target.files)}
-              className="hidden"
-              accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.jpg,.jpeg,.png"
-            />
-          </div>
-
-          {/* Files List */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h5 className="font-medium text-gray-900">Course Materials ({files.length})</h5>
-              <div className="text-sm text-gray-500">
-                Total: {files.reduce((total, file) => total + parseFloat(file.size), 0).toFixed(1)} MB
-              </div>
-            </div>
-
-            {files.length === 0 ? (
-              <div className="text-center py-8">
-                <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">No files uploaded yet</p>
-                <p className="text-sm text-gray-500 mt-1">Upload notes, assignments, and other course materials</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {files.map((file) => (
-                  <div key={file.id} className="flex items-center justify-between bg-white p-3 rounded-lg border">
-                    <div className="flex items-center flex-1">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                        <FileText className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
-                        <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
-                          <span>{file.size}</span>
-                          <span>Uploaded: {file.uploadedAt}</span>
-                          <span>{file.downloads} downloads</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <button className="p-2 text-gray-400 hover:text-blue-600 rounded">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 text-gray-400 hover:text-green-600 rounded">
-                        <Share2 className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 text-gray-400 hover:text-purple-600 rounded">
-                        <Download className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(file.id)}
-                        className="p-2 text-gray-400 hover:text-red-600 rounded"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* File Categories */}
-          <div className="mt-6">
-            <h5 className="font-medium text-gray-900 mb-3">Quick Upload Categories</h5>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <button className="p-3 bg-blue-50 rounded-lg text-center hover:bg-blue-100 transition-colors">
-                <BookOpen className="w-6 h-6 text-blue-600 mx-auto mb-1" />
-                <span className="text-sm text-blue-700">Lecture Notes</span>
-              </button>
-              <button className="p-3 bg-green-50 rounded-lg text-center hover:bg-green-100 transition-colors">
-                <FileText className="w-6 h-6 text-green-600 mx-auto mb-1" />
-                <span className="text-sm text-green-700">Assignments</span>
-              </button>
-              <button className="p-3 bg-purple-50 rounded-lg text-center hover:bg-purple-100 transition-colors">
-                <Calendar className="w-6 h-6 text-purple-600 mx-auto mb-1" />
-                <span className="text-sm text-purple-700">Syllabus</span>
-              </button>
-              <button className="p-3 bg-orange-50 rounded-lg text-center hover:bg-orange-100 transition-colors">
-                <Activity className="w-6 h-6 text-orange-600 mx-auto mb-1" />
-                <span className="text-sm text-orange-700">Lab Manuals</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-end space-x-3 px-6 py-4 border-t bg-gray-50">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-          >
-            Close
-          </button>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-            Save Changes
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Create Group Modal Component (keeping existing)
+// Create Group Modal Component
 const CreateGroupModal = ({ onClose, onGroupCreated }) => {
   const [formData, setFormData] = useState({
     name: '',
@@ -1210,6 +592,7 @@ const CreateGroupModal = ({ onClose, onGroupCreated }) => {
     setError('');
 
     try {
+      // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       const newGroup = {
@@ -1273,6 +656,93 @@ const CreateGroupModal = ({ onClose, onGroupCreated }) => {
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">Join Permissions</label>
+            <div className="space-y-3">
+              <div className="flex items-center">
+                <input
+                  type="radio"
+                  id="college-only"
+                  name="joinPermissions"
+                  value="college-only"
+                  checked={formData.settings.joinPermissions === 'college-only'}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    settings: { ...prev.settings, joinPermissions: e.target.value }
+                  }))}
+                  className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                />
+                <label htmlFor="college-only" className="ml-3 text-sm text-gray-700">
+                  <div className="flex items-center">
+                    <Shield className="w-4 h-4 mr-2 text-blue-600" />
+                    <div>
+                      <div className="font-medium">College Only</div>
+                      <div className="text-gray-500">Students must be within campus radius to join</div>
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="radio"
+                  id="anywhere"
+                  name="joinPermissions"
+                  value="anywhere"
+                  checked={formData.settings.joinPermissions === 'anywhere'}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    settings: { ...prev.settings, joinPermissions: e.target.value }
+                  }))}
+                  className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                />
+                <label htmlFor="anywhere" className="ml-3 text-sm text-gray-700">
+                  <div className="flex items-center">
+                    <Globe className="w-4 h-4 mr-2 text-green-600" />
+                    <div>
+                      <div className="font-medium">Anywhere</div>
+                      <div className="text-gray-500">Students can join from any location</div>
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="allowBroadcast"
+                checked={formData.settings.allowBroadcast}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  settings: { ...prev.settings, allowBroadcast: e.target.checked }
+                }))}
+                className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="allowBroadcast" className="ml-2 text-sm text-gray-700">
+                Enable broadcast messaging to all students
+              </label>
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="autoApprove"
+                checked={formData.settings.autoApprove}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  settings: { ...prev.settings, autoApprove: e.target.checked }
+                }))}
+                className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="autoApprove" className="ml-2 text-sm text-gray-700">
+                Auto-approve student join requests
+              </label>
+            </div>
+          </div>
+
           <div className="flex justify-end space-x-3 pt-6 border-t">
             <button
               type="button"
@@ -1302,14 +772,600 @@ const CreateGroupModal = ({ onClose, onGroupCreated }) => {
   );
 };
 
-// Manage Group Modal Component (keeping existing but making settings interactive)
-const ManageGroupModal = ({ group, onClose, onGroupUpdated }) => {
+// Subject Details Modal with Lectures Management
+const SubjectDetailsModal = ({ subject, onClose, onSubjectUpdated, generateQRCode }) => {
+  const [activeTab, setActiveTab] = useState(subject.showAnalytics ? 'analytics' : 'lectures');
+  const [lectures, setLectures] = useState(subject.lectures || []);
+  const [showCreateLecture, setShowCreateLecture] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(null);
+  const [activeLecture, setActiveLecture] = useState(null);
+
+  const tabs = [
+    { id: 'lectures', name: 'Lectures', icon: Calendar },
+    { id: 'files', name: 'Files & Notes', icon: FileText },
+    { id: 'analytics', name: 'Analytics', icon: BarChart3 }
+  ];
+
+  const handleCreateLecture = (lectureData) => {
+    const newLecture = {
+      _id: Date.now().toString(),
+      ...lectureData,
+      qrCode: `QR_${subject.subject.replace(/\s+/g, '_').toUpperCase()}_${Date.now()}`,
+      attendees: 0,
+      files: [],
+      isActive: false
+    };
+    
+    setLectures([newLecture, ...lectures]);
+    setShowCreateLecture(false);
+  };
+
+  const handleStartLecture = (lectureId) => {
+    setLectures(prev => prev.map(lecture => ({
+      ...lecture,
+      isActive: lecture._id === lectureId ? true : false
+    })));
+    setActiveLecture(lectureId);
+  };
+
+  const handleStopLecture = (lectureId) => {
+    setLectures(prev => prev.map(lecture => ({
+      ...lecture,
+      isActive: lecture._id === lectureId ? false : lecture.isActive
+    })));
+    setActiveLecture(null);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div className="relative top-10 mx-auto p-0 border w-11/12 max-w-6xl shadow-lg rounded-lg bg-white">
+        {/* Header */}
+        <div className="flex justify-between items-center p-6 border-b">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900">{subject.subject}</h3>
+            <p className="text-sm text-gray-500 mt-1">{subject.groupName} • {subject.studentCount} students</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8 px-6">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
+                  activeTab === tab.id
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <tab.icon className="w-4 h-4 mr-2" />
+                {tab.name}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Tab Content */}
+        <div className="p-6 max-h-96 overflow-y-auto">
+          {activeTab === 'lectures' && (
+            <div>
+              <div className="flex justify-between items-center mb-6">
+                <h4 className="text-md font-medium text-gray-900">Lectures</h4>
+                <button
+                  onClick={() => setShowCreateLecture(true)}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Lecture
+                </button>
+              </div>
+
+              {showCreateLecture && (
+                <CreateLectureForm
+                  onCancel={() => setShowCreateLecture(false)}
+                  onSubmit={handleCreateLecture}
+                />
+              )}
+
+              <div className="space-y-4">
+                {lectures.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Calendar className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No lectures yet</h3>
+                    <p className="mt-1 text-sm text-gray-500">Create your first lecture to get started.</p>
+                  </div>
+                ) : (
+                  lectures.map((lecture) => (
+                    <div key={lecture._id} className={`p-4 rounded-lg border-2 ${
+                      lecture.isActive ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-white'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3">
+                            <h5 className="font-medium text-gray-900">{lecture.title}</h5>
+                            {lecture.isActive && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
+                                Live
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center space-x-4 mt-1 text-sm text-gray-500">
+                            <span>{lecture.date}</span>
+                            <span>{lecture.startTime} - {lecture.endTime}</span>
+                            <span>{lecture.attendees} attended</span>
+                            {lecture.files && lecture.files.length > 0 && (
+                              <span>{lecture.files.length} files</span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          {lecture.isActive ? (
+                            <button
+                              onClick={() => handleStopLecture(lecture._id)}
+                              className="inline-flex items-center px-3 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100"
+                            >
+                              <Pause className="w-4 h-4 mr-1" />
+                              Stop
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleStartLecture(lecture._id)}
+                              className="inline-flex items-center px-3 py-2 border border-green-300 text-sm font-medium rounded-md text-green-700 bg-green-50 hover:bg-green-100"
+                            >
+                              <Play className="w-4 h-4 mr-1" />
+                              Start
+                            </button>
+                          )}
+                          
+                          <button
+                            onClick={() => setShowQRModal(lecture)}
+                            className="inline-flex items-center px-3 py-2 border border-blue-300 text-sm font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100"
+                          >
+                            <QrCode className="w-4 h-4 mr-1" />
+                            QR Code
+                          </button>
+                          
+                          <button className="p-2 text-gray-400 hover:text-gray-600 rounded">
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'files' && (
+            <FilesTab lectures={lectures} setLectures={setLectures} />
+          )}
+
+          {activeTab === 'analytics' && (
+            <AnalyticsTab subject={subject} lectures={lectures} />
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end space-x-3 px-6 py-4 border-t bg-gray-50">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+
+      {/* QR Code Modal */}
+      {showQRModal && (
+        <QRCodeModal
+          lecture={showQRModal}
+          subject={subject}
+          onClose={() => setShowQRModal(null)}
+          generateQRCode={generateQRCode}
+        />
+      )}
+    </div>
+  );
+};
+
+// Create Lecture Form Component
+const CreateLectureForm = ({ onCancel, onSubmit }) => {
+  const [formData, setFormData] = useState({
+    title: '',
+    date: new Date().toISOString().split('T')[0],
+    startTime: '09:00',
+    endTime: '10:30'
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+      <h5 className="font-medium text-gray-900 mb-4">Create New Lecture</h5>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Lecture Title *</label>
+            <input
+              type="text"
+              required
+              value={formData.title}
+              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="e.g., Introduction to Arrays"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Date *</label>
+            <input
+              type="date"
+              required
+              value={formData.date}
+              onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Start Time *</label>
+            <input
+              type="time"
+              required
+              value={formData.startTime}
+              onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">End Time *</label>
+            <input
+              type="time"
+              required
+              value={formData.endTime}
+              onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
+              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+        </div>
+        
+        <div className="flex space-x-3">
+          <button
+            type="submit"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+          >
+            Create Lecture
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+// QR Code Modal Component
+const QRCodeModal = ({ lecture, subject, onClose, generateQRCode }) => {
+  const joinUrl = generateQRCode(lecture._id, subject.subject);
+  
+  const copyJoinUrl = () => {
+    navigator.clipboard.writeText(joinUrl);
+    alert('Join URL copied to clipboard!');
+  };
+
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div className="relative top-20 mx-auto p-6 border w-11/12 max-w-md shadow-lg rounded-lg bg-white">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Lecture QR Code</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="text-center">
+          <div className="mb-4">
+            <h4 className="font-medium text-gray-900">{lecture.title}</h4>
+            <p className="text-sm text-gray-500">{subject.subject}</p>
+            <p className="text-sm text-gray-500">{lecture.date} • {lecture.startTime} - {lecture.endTime}</p>
+          </div>
+
+          {/* QR Code Placeholder */}
+          <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-8 mb-4">
+            <QrCode className="mx-auto h-24 w-24 text-gray-400 mb-4" />
+            <p className="text-sm text-gray-500">QR Code for lecture attendance</p>
+            <p className="text-xs text-gray-400 mt-2">Students scan this to join the lecture</p>
+          </div>
+
+          <div className="space-y-3">
+            <div className="bg-gray-50 rounded-lg p-3">
+              <p className="text-xs text-gray-500 mb-1">Join URL:</p>
+              <p className="text-sm font-mono text-gray-700 break-all">{joinUrl}</p>
+            </div>
+
+            <div className="flex space-x-2">
+              <button
+                onClick={copyJoinUrl}
+                className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                Copy URL
+              </button>
+              <button className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                <Download className="w-4 h-4 mr-2" />
+                Download QR
+              </button>
+            </div>
+          </div>
+
+          {lecture.isActive && (
+            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center justify-center">
+                <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
+                <span className="text-sm font-medium text-green-800">Lecture is Live</span>
+              </div>
+              <p className="text-xs text-green-600 mt-1">Students can scan QR code to mark attendance</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Files Tab Component
+const FilesTab = ({ lectures, setLectures }) => {
+  const [selectedLecture, setSelectedLecture] = useState(lectures[0]?._id || '');
+  const [dragOver, setDragOver] = useState(false);
+
+  const currentLecture = lectures.find(l => l._id === selectedLecture);
+  const files = currentLecture?.files || [];
+
+  const handleFileUpload = (e) => {
+    const uploadedFiles = Array.from(e.target.files);
+    uploadedFiles.forEach(file => {
+      const newFile = {
+        name: file.name,
+        type: getFileType(file.name),
+        size: formatFileSize(file.size),
+        uploadedAt: new Date().toISOString().split('T')[0]
+      };
+      
+      setLectures(prev => prev.map(lecture => 
+        lecture._id === selectedLecture
+          ? { ...lecture, files: [...(lecture.files || []), newFile] }
+          : lecture
+      ));
+    });
+  };
+
+  const getFileType = (filename) => {
+    const ext = filename.split('.').pop().toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) return 'image';
+    if (['pdf'].includes(ext)) return 'pdf';
+    if (['mp4', 'avi', 'mov'].includes(ext)) return 'video';
+    if (['cpp', 'java', 'py', 'js'].includes(ext)) return 'code';
+    return 'document';
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const getFileIcon = (type) => {
+    switch (type) {
+      case 'image': return <Image className="w-5 h-5 text-green-600" />;
+      case 'pdf': return <FileText className="w-5 h-5 text-red-600" />;
+      case 'video': return <Video className="w-5 h-5 text-purple-600" />;
+      case 'code': return <Monitor className="w-5 h-5 text-blue-600" />;
+      default: return <FileText className="w-5 h-5 text-gray-600" />;
+    }
+  };
+
+  return (
+    <div>
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-700 mb-2">Select Lecture</label>
+        <select
+          value={selectedLecture}
+          onChange={(e) => setSelectedLecture(e.target.value)}
+          className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+        >
+          {lectures.map(lecture => (
+            <option key={lecture._id} value={lecture._id}>
+              {lecture.title} - {lecture.date}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {selectedLecture && (
+        <div>
+          {/* File Upload Area */}
+          <div
+            className={`border-2 border-dashed rounded-lg p-6 text-center mb-6 transition-colors ${
+              dragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300'
+            }`}
+            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragOver(false);
+              handleFileUpload(e);
+            }}
+          >
+            <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Upload Files</h3>
+            <p className="text-gray-500 mb-4">Drag and drop files here, or click to select</p>
+            <label className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 cursor-pointer">
+              <Upload className="w-4 h-4 mr-2" />
+              Choose Files
+              <input
+                type="file"
+                multiple
+                className="sr-only"
+                onChange={handleFileUpload}
+                accept=".pdf,.jpg,.jpeg,.png,.mp4,.cpp,.java,.py,.js,.txt,.doc,.docx,.ppt,.pptx"
+              />
+            </label>
+          </div>
+
+          {/* Files List */}
+          <div>
+            <h4 className="font-medium text-gray-900 mb-4">Uploaded Files ({files.length})</h4>
+            {files.length === 0 ? (
+              <div className="text-center py-8">
+                <FileText className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No files uploaded</h3>
+                <p className="mt-1 text-sm text-gray-500">Upload notes, assignments, or other materials for this lecture.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {files.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      {getFileIcon(file.type)}
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                        <p className="text-xs text-gray-500">{file.size} • Uploaded on {file.uploadedAt}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button className="p-1 text-gray-400 hover:text-blue-600">
+                        <Download className="w-4 h-4" />
+                      </button>
+                      <button className="p-1 text-gray-400 hover:text-red-600">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Analytics Tab Component
+const AnalyticsTab = ({ subject, lectures }) => {
+  const totalLectures = lectures.length;
+  const completedLectures = lectures.filter(l => !l.isActive && l.attendees > 0).length;
+  const avgAttendance = totalLectures > 0 
+    ? Math.round(lectures.reduce((sum, l) => sum + (l.attendees || 0), 0) / totalLectures)
+    : 0;
+  const totalFiles = lectures.reduce((sum, l) => sum + (l.files?.length || 0), 0);
+
+  return (
+    <div className="space-y-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <div className="flex items-center">
+            <Calendar className="h-8 w-8 text-blue-600" />
+            <div className="ml-3">
+              <p className="text-sm font-medium text-blue-600">Total Lectures</p>
+              <p className="text-2xl font-bold text-blue-900">{totalLectures}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-green-50 p-4 rounded-lg">
+          <div className="flex items-center">
+            <CheckCircle className="h-8 w-8 text-green-600" />
+            <div className="ml-3">
+              <p className="text-sm font-medium text-green-600">Completed</p>
+              <p className="text-2xl font-bold text-green-900">{completedLectures}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-purple-50 p-4 rounded-lg">
+          <div className="flex items-center">
+            <Users className="h-8 w-8 text-purple-600" />
+            <div className="ml-3">
+              <p className="text-sm font-medium text-purple-600">Avg Attendance</p>
+              <p className="text-2xl font-bold text-purple-900">{avgAttendance}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-orange-50 p-4 rounded-lg">
+          <div className="flex items-center">
+            <FileText className="h-8 w-8 text-orange-600" />
+            <div className="ml-3">
+              <p className="text-sm font-medium text-orange-600">Total Files</p>
+              <p className="text-2xl font-bold text-orange-900">{totalFiles}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Lectures */}
+      <div>
+        <h4 className="font-medium text-gray-900 mb-4">Recent Lectures</h4>
+        {lectures.length === 0 ? (
+          <div className="text-center py-8">
+            <BarChart3 className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No data available</h3>
+            <p className="mt-1 text-sm text-gray-500">Create lectures to see analytics and attendance data.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {lectures.slice(0, 5).map((lecture) => (
+              <div key={lecture._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900">{lecture.title}</p>
+                  <p className="text-sm text-gray-500">{lecture.date} • {lecture.startTime}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-gray-900">{lecture.attendees}/{subject.studentCount}</p>
+                  <p className="text-xs text-gray-500">
+                    {Math.round((lecture.attendees / subject.studentCount) * 100)}% attendance
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Manage Group Modal Component with Interactive Settings
+const ManageGroupModal = ({ group, onClose, onGroupUpdated, copyGroupCode }) => {
   const [activeTab, setActiveTab] = useState('classes');
   const [classes, setClasses] = useState(group.classes);
   const [showAddSubject, setShowAddSubject] = useState(false);
   const [newSubject, setNewSubject] = useState('');
   const [settings, setSettings] = useState(group.settings);
-  const [groupData, setGroupData] = useState(group);
+  const [broadcastMessage, setBroadcastMessage] = useState({
+    type: 'General Announcement',
+    subject: '',
+    message: ''
+  });
 
   const tabs = [
     { id: 'classes', name: 'Subjects', icon: BookOpen },
@@ -1328,8 +1384,9 @@ const ManageGroupModal = ({ group, onClose, onGroupUpdated }) => {
         lastSession: null,
         attendanceRate: 0,
         isActive: true,
-        activeLecture: null,
-        files: []
+        lectures: [],
+        totalLectures: 0,
+        completedLectures: 0
       };
       setClasses([...classes, newClass]);
       setNewSubject('');
@@ -1341,13 +1398,20 @@ const ManageGroupModal = ({ group, onClose, onGroupUpdated }) => {
     setClasses(classes.filter(cls => cls._id !== classId));
   };
 
-  const handleSettingsChange = (setting, value) => {
-    setSettings(prev => ({ ...prev, [setting]: value }));
+  const handleSettingsUpdate = (newSettings) => {
+    setSettings(newSettings);
   };
 
-  const copyGroupCode = (groupCode) => {
-    navigator.clipboard.writeText(groupCode);
-    alert('Group code copied to clipboard!');
+  const handleSendBroadcast = () => {
+    if (broadcastMessage.subject.trim() && broadcastMessage.message.trim()) {
+      // In real app, this would send API request
+      alert(`Broadcast sent to ${group.totalStudents} students!`);
+      setBroadcastMessage({
+        type: 'General Announcement',
+        subject: '',
+        message: ''
+      });
+    }
   };
 
   return (
@@ -1435,18 +1499,20 @@ const ManageGroupModal = ({ group, onClose, onGroupUpdated }) => {
                         <span>{cls.studentCount} students</span>
                         {cls.schedule.room && <span>{cls.schedule.room}</span>}
                         {cls.attendanceRate > 0 && <span>{cls.attendanceRate}% attendance</span>}
+                        <span>{cls.completedLectures || 0}/{cls.totalLectures || 0} lectures</span>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <button className="p-2 text-gray-400 hover:text-blue-600 rounded">
-                        <QrCode className="w-4 h-4" />
+                      <button className="p-2 text-gray-400 hover:text-blue-600 rounded" title="Manage Lectures">
+                        <Calendar className="w-4 h-4" />
                       </button>
-                      <button className="p-2 text-gray-400 hover:text-green-600 rounded">
+                      <button className="p-2 text-gray-400 hover:text-green-600 rounded" title="View Analytics">
                         <BarChart3 className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => handleRemoveSubject(cls._id)}
                         className="p-2 text-gray-400 hover:text-red-600 rounded"
+                        title="Remove Subject"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -1497,18 +1563,15 @@ const ManageGroupModal = ({ group, onClose, onGroupUpdated }) => {
                     <div className="flex items-center space-x-2">
                       <input
                         type="text"
-                        value={groupData.groupCode}
+                        value={group.groupCode}
                         readOnly
                         className="block w-32 border border-gray-300 rounded-md px-3 py-2 bg-gray-50"
                       />
                       <button
-                        onClick={() => copyGroupCode(groupData.groupCode)}
+                        onClick={() => copyGroupCode(group.groupCode)}
                         className="p-2 text-gray-400 hover:text-blue-600"
                       >
                         <Copy className="w-4 h-4" />
-                      </button>
-                      <button className="px-3 py-2 text-sm border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
-                        Regenerate
                       </button>
                     </div>
                   </div>
@@ -1522,7 +1585,7 @@ const ManageGroupModal = ({ group, onClose, onGroupUpdated }) => {
                           id="college-only-edit"
                           name="joinPermissions"
                           checked={settings.joinPermissions === 'college-only'}
-                          onChange={() => handleSettingsChange('joinPermissions', 'college-only')}
+                          onChange={() => handleSettingsUpdate({...settings, joinPermissions: 'college-only'})}
                           className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                         />
                         <label htmlFor="college-only-edit" className="ml-3 text-sm text-gray-700 flex items-center">
@@ -1536,7 +1599,7 @@ const ManageGroupModal = ({ group, onClose, onGroupUpdated }) => {
                           id="anywhere-edit"
                           name="joinPermissions"
                           checked={settings.joinPermissions === 'anywhere'}
-                          onChange={() => handleSettingsChange('joinPermissions', 'anywhere')}
+                          onChange={() => handleSettingsUpdate({...settings, joinPermissions: 'anywhere'})}
                           className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                         />
                         <label htmlFor="anywhere-edit" className="ml-3 text-sm text-gray-700 flex items-center">
@@ -1548,73 +1611,31 @@ const ManageGroupModal = ({ group, onClose, onGroupUpdated }) => {
                   </div>
 
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label htmlFor="allowBroadcast-edit" className="text-sm text-gray-700 flex items-center">
-                        <MessageSquare className="w-4 h-4 mr-2 text-purple-600" />
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="allowBroadcast-edit"
+                        checked={settings.allowBroadcast}
+                        onChange={(e) => handleSettingsUpdate({...settings, allowBroadcast: e.target.checked})}
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <label htmlFor="allowBroadcast-edit" className="ml-2 text-sm text-gray-700">
                         Enable broadcast messaging
                       </label>
-                      <button
-                        onClick={() => handleSettingsChange('allowBroadcast', !settings.allowBroadcast)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          settings.allowBroadcast ? 'bg-blue-600' : 'bg-gray-200'
-                        }`}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          settings.allowBroadcast ? 'translate-x-6' : 'translate-x-1'
-                        }`} />
-                      </button>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <label htmlFor="autoApprove-edit" className="text-sm text-gray-700 flex items-center">
-                        <CheckCircle className="w-4 h-4 mr-2 text-green-600" />
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="autoApprove-edit"
+                        checked={settings.autoApprove}
+                        onChange={(e) => handleSettingsUpdate({...settings, autoApprove: e.target.checked})}
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <label htmlFor="autoApprove-edit" className="ml-2 text-sm text-gray-700">
                         Auto-approve join requests
                       </label>
-                      <button
-                        onClick={() => handleSettingsChange('autoApprove', !settings.autoApprove)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                          settings.autoApprove ? 'bg-blue-600' : 'bg-gray-200'
-                        }`}
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          settings.autoApprove ? 'translate-x-6' : 'translate-x-1'
-                        }`} />
-                      </button>
                     </div>
-
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm text-gray-700 flex items-center">
-                        <Bell className="w-4 h-4 mr-2 text-yellow-600" />
-                        Send attendance reminders
-                      </label>
-                      <button
-                        className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors bg-gray-200"
-                      >
-                        <span className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1" />
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm text-gray-700 flex items-center">
-                        <Shield className="w-4 h-4 mr-2 text-red-600" />
-                        Require location verification
-                      </label>
-                      <button
-                        className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors bg-blue-600"
-                      >
-                        <span className="inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-6" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="border-t pt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Group Description</label>
-                    <textarea
-                      value={groupData.description}
-                      onChange={(e) => setGroupData(prev => ({ ...prev, description: e.target.value }))}
-                      rows={3}
-                      className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    />
                   </div>
                 </div>
               </div>
@@ -1640,12 +1661,16 @@ const ManageGroupModal = ({ group, onClose, onGroupUpdated }) => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Message Type</label>
-                    <select className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                    <select 
+                      value={broadcastMessage.type}
+                      onChange={(e) => setBroadcastMessage(prev => ({...prev, type: e.target.value}))}
+                      className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    >
                       <option>General Announcement</option>
                       <option>Class Schedule Change</option>
                       <option>Assignment Reminder</option>
                       <option>Exam Notice</option>
-                      <option>Emergency Alert</option>
+                      <option>Holiday Notice</option>
                     </select>
                   </div>
 
@@ -1653,6 +1678,8 @@ const ManageGroupModal = ({ group, onClose, onGroupUpdated }) => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
                     <input
                       type="text"
+                      value={broadcastMessage.subject}
+                      onChange={(e) => setBroadcastMessage(prev => ({...prev, subject: e.target.value}))}
                       placeholder="Message subject..."
                       className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     />
@@ -1662,70 +1689,23 @@ const ManageGroupModal = ({ group, onClose, onGroupUpdated }) => {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
                     <textarea
                       rows={4}
+                      value={broadcastMessage.message}
+                      onChange={(e) => setBroadcastMessage(prev => ({...prev, message: e.target.value}))}
                       placeholder="Type your message here..."
                       className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
 
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="urgent"
-                        className="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
-                      />
-                      <label htmlFor="urgent" className="ml-2 text-sm text-gray-700">
-                        Mark as urgent
-                      </label>
-                    </div>
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="sms"
-                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <label htmlFor="sms" className="ml-2 text-sm text-gray-700">
-                        Send SMS notification
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
-                    <div className="flex items-center">
-                      <Users className="w-5 h-5 text-blue-600 mr-2" />
-                      <span className="text-sm font-medium text-blue-700">
-                        Will be sent to {group.totalStudents} students
-                      </span>
-                    </div>
-                    <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                  <div className="flex items-center space-x-3">
+                    <button 
+                      onClick={handleSendBroadcast}
+                      disabled={!broadcastMessage.subject.trim() || !broadcastMessage.message.trim()}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
                       <MessageSquare className="w-4 h-4 mr-2" />
-                      Send Message
+                      Send to All Students
                     </button>
-                  </div>
-
-                  {/* Recent Messages */}
-                  <div className="mt-6">
-                    <h5 className="font-medium text-gray-900 mb-3">Recent Messages</h5>
-                    <div className="space-y-2">
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">Assignment Deadline Reminder</p>
-                            <p className="text-xs text-gray-600 mt-1">Please submit your DSA assignment by tomorrow 11:59 PM.</p>
-                          </div>
-                          <span className="text-xs text-gray-500">2 hours ago</span>
-                        </div>
-                      </div>
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">Class Postponed</p>
-                            <p className="text-xs text-gray-600 mt-1">Tomorrow's DBMS class is postponed to Friday same time.</p>
-                          </div>
-                          <span className="text-xs text-gray-500">1 day ago</span>
-                        </div>
-                      </div>
-                    </div>
+                    <span className="text-sm text-gray-500">Will be sent to {group.totalStudents} students</span>
                   </div>
                 </div>
               ) : (
@@ -1735,10 +1715,10 @@ const ManageGroupModal = ({ group, onClose, onGroupUpdated }) => {
                   <p className="mt-1 text-sm text-gray-500">
                     Enable broadcast messaging in group settings to send announcements.
                   </p>
-                  <button 
+                  <button
                     onClick={() => {
                       setActiveTab('settings');
-                      handleSettingsChange('allowBroadcast', true);
+                      handleSettingsUpdate({...settings, allowBroadcast: true});
                     }}
                     className="mt-3 inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-100 hover:bg-blue-200"
                   >
@@ -1760,7 +1740,7 @@ const ManageGroupModal = ({ group, onClose, onGroupUpdated }) => {
           </button>
           <button
             onClick={() => {
-              const updatedGroup = { ...groupData, classes, settings };
+              const updatedGroup = { ...group, classes, settings };
               onGroupUpdated(updatedGroup);
             }}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
