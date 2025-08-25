@@ -73,7 +73,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
 
   const fetchClassGroups = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/class-groups/my-groups`, {
+      const response = await fetch(`${API_BASE_URL}/classes/my-classes`, {
         headers: getAuthHeaders()
       });
       
@@ -117,7 +117,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/class-groups/create`, {
+      const response = await fetch(`${API_BASE_URL}/classes/create`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
