@@ -21,7 +21,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
   const [attendanceCount, setAttendanceCount] = useState(0);
   const [attendanceList, setAttendanceList] = useState([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [formData, setFormData] = useState({ name: '', description: '' });
+  const [formData, setFormData] = useState({ name: '', subject: '', description: '' });
   const [stats, setStats] = useState({
     totalClasses: 0,
     totalLectures: 0,
@@ -73,25 +73,32 @@ const TeacherDashboard = ({ user, onLogout }) => {
 
   const fetchClassGroups = async () => {
     try {
+      console.log('Fetching classes with headers:', getAuthHeaders());
       const response = await fetch(`${API_BASE_URL}/classes/my-classes`, {
         headers: getAuthHeaders()
       });
       
+      console.log('Response status:', response.status);
+      
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error Response:', errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
+      console.log('API Response data:', data);
       if (data.success) {
         const groups = data.classes || data.classGroups || [];
         setClassGroups(groups);
-        calculateStats(groups); // Calculate stats after data is fetched
+        calculateStats(groups);
       } else {
         console.error('Failed to fetch class groups:', data.message);
+        showMessage(data.message || 'Failed to load classes', 'error');
       }
     } catch (error) {
       console.error('Error fetching class groups:', error);
-      // Don't show error to user for background fetch
+      showMessage('Unable to connect to server. Please check your connection.', 'error');
     }
   };
 
@@ -117,20 +124,36 @@ const TeacherDashboard = ({ user, onLogout }) => {
 
     setLoading(true);
     try {
+      const requestBody = {
+        name: formData.name.trim(),
+        subject: formData.subject.trim() || formData.name.trim(), // Use name as subject if not provided
+        description: formData.description.trim()
+      };
+      console.log('Creating class with data:', requestBody);
+      console.log('Using headers:', getAuthHeaders());
+      
       const response = await fetch(`${API_BASE_URL}/classes/create`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify({
-          name: formData.name.trim(),
-          description: formData.description.trim()
-        })
+        body: JSON.stringify(requestBody)
       });
       
+      console.log('Create response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Create API Error Response:', errorText);
+        showMessage(`Server error: ${response.status}. ${errorText}`, 'error');
+        return;
+      }
+      
       const data = await response.json();
+      console.log('Create response data:', data);
+      
       if (data.success) {
         await fetchClassGroups();
         setShowCreateForm(false);
-        setFormData({ name: '', description: '' });
+        setFormData({ name: '', subject: '', description: '' });
         showMessage('Class group created successfully!');
       } else {
         showMessage(data.message || 'Failed to create class group', 'error');
@@ -439,6 +462,18 @@ const TeacherDashboard = ({ user, onLogout }) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
+                Subject *
+              </label>
+              <input
+                type="text"
+                value={formData.subject}
+                onChange={(e) => setFormData(prev => ({...prev, subject: e.target.value}))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="e.g., Computer Science, Mathematics, Physics"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Description
               </label>
               <textarea
@@ -452,7 +487,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={createClassGroup}
-                disabled={loading || !formData.name.trim()}
+                disabled={loading || !formData.name.trim() || !formData.subject.trim()}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
               >
                 {loading ? <Loader className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
