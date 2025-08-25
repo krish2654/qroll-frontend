@@ -83,7 +83,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
       
       const data = await response.json();
       if (data.success) {
-        const groups = data.classGroups || [];
+        const groups = data.classes || data.classGroups || [];
         setClassGroups(groups);
         calculateStats(groups); // Calculate stats after data is fetched
       } else {
@@ -432,7 +432,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
               <input
                 type="text"
                 value={formData.name}
-                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                onChange={(e) => setFormData(prev => ({...prev, name: e.target.value}))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="e.g., Computer Science 10A, Mathematics Grade 12"
               />
@@ -443,7 +443,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
               </label>
               <textarea
                 value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                onChange={(e) => setFormData(prev => ({...prev, description: e.target.value}))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 rows="3"
                 placeholder="Optional description about the class..."
