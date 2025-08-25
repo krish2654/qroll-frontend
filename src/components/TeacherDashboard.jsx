@@ -21,7 +21,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
   const [attendanceCount, setAttendanceCount] = useState(0);
   const [attendanceList, setAttendanceList] = useState([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [formData, setFormData] = useState({ name: '', subject: '', description: '' });
+  const [formData, setFormData] = useState({ name: '', section: '', subjects: [], description: '' });
   const [stats, setStats] = useState({
     totalClasses: 0,
     totalLectures: 0,
@@ -126,7 +126,8 @@ const TeacherDashboard = ({ user, onLogout }) => {
     try {
       const requestBody = {
         name: formData.name.trim(),
-        subject: formData.subject.trim() || formData.name.trim(), // Use name as subject if not provided
+        section: formData.section.trim(),
+        subjects: formData.subjects || [],
         description: formData.description.trim()
       };
       console.log('Creating class with data:', requestBody);
@@ -153,7 +154,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
       if (data.success) {
         await fetchClassGroups();
         setShowCreateForm(false);
-        setFormData({ name: '', subject: '', description: '' });
+        setFormData({ name: '', section: '', subjects: [], description: '' });
         showMessage('Class group created successfully!');
       } else {
         showMessage(data.message || 'Failed to create class group', 'error');
@@ -376,9 +377,12 @@ const TeacherDashboard = ({ user, onLogout }) => {
             {classGroups.slice(0, 5).map((group) => (
               <div key={group._id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
                 <div className="flex-1">
-                  <h4 className="font-medium text-gray-900">{group.name}</h4>
+                  <h4 className="font-medium text-gray-900">{group.name} - {group.section}</h4>
                   <p className="text-sm text-gray-500">
-                    {group.students ? group.students.length : 0} students • Code: {group.groupCode}
+                    {group.students ? group.students.length : 0} students • Code: {group.classCode}
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    {group.subjects ? group.subjects.length : 0} subjects
                   </p>
                   {group.description && (
                     <p className="text-xs text-gray-400 mt-1">{group.description}</p>
@@ -462,14 +466,14 @@ const TeacherDashboard = ({ user, onLogout }) => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Subject *
+                Section *
               </label>
               <input
                 type="text"
-                value={formData.subject}
-                onChange={(e) => setFormData(prev => ({...prev, subject: e.target.value}))}
+                value={formData.section}
+                onChange={(e) => setFormData(prev => ({...prev, section: e.target.value}))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="e.g., Computer Science, Mathematics, Physics"
+                placeholder="e.g., A, B, 10A, 12B"
               />
             </div>
             <div>
@@ -487,7 +491,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={createClassGroup}
-                disabled={loading || !formData.name.trim() || !formData.subject.trim()}
+                disabled={loading || !formData.name.trim() || !formData.section.trim()}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
               >
                 {loading ? <Loader className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
@@ -510,10 +514,22 @@ const TeacherDashboard = ({ user, onLogout }) => {
           <div key={group._id} className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
             <div className="flex justify-between items-start mb-4">
               <div className="flex-1">
-                <h3 className="text-lg font-medium text-gray-900">{group.name}</h3>
+                <h3 className="text-lg font-medium text-gray-900">{group.name} - Section {group.section}</h3>
                 <p className="text-sm text-gray-600 mt-1">
                   {group.description || 'No description provided'}
                 </p>
+                {group.subjects && group.subjects.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs text-gray-500 mb-1">Subjects:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {group.subjects.map((subject, index) => (
+                        <span key={index} className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                          {subject.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="flex gap-2">
                 <button 
@@ -536,11 +552,11 @@ const TeacherDashboard = ({ user, onLogout }) => {
                 <p className="font-medium">{group.students ? group.students.length : 0}</p>
               </div>
               <div>
-                <p className="text-gray-500">Group Code</p>
+                <p className="text-gray-500">Class Code</p>
                 <div className="flex items-center gap-2">
-                  <p className="font-medium font-mono">{group.groupCode}</p>
+                  <p className="font-medium font-mono">{group.classCode}</p>
                   <button 
-                    onClick={() => copyToClipboard(group.groupCode)}
+                    onClick={() => copyToClipboard(group.classCode)}
                     className="p-1 hover:bg-gray-100 rounded"
                   >
                     <Copy className="w-3 h-3" />
