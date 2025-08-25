@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserCheck, GraduationCap, Users, LogOut, Loader } from 'lucide-react';
 import { authAPI, authStorage } from './services/api';
-import TeacherDashboard from './components/TeacherDashboard';
+import TeacherDashboard from './components/TeacherDashboard_new';
 
 const loadGoogleScript = () => {
   return new Promise((resolve) => {
