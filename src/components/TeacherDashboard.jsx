@@ -22,6 +22,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
   const [attendanceList, setAttendanceList] = useState([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({ name: '', section: '', subjects: [], description: '' });
+  const [newSubject, setNewSubject] = useState({ name: '', code: '' });
   const [stats, setStats] = useState({
     totalClasses: 0,
     totalLectures: 0,
@@ -154,7 +155,9 @@ const TeacherDashboard = ({ user, onLogout }) => {
       if (data.success) {
         await fetchClassGroups();
         setShowCreateForm(false);
+        setNewSubject({ name: '', code: '' });
         setFormData({ name: '', section: '', subjects: [], description: '' });
+        setNewSubject({ name: '', code: '' });
         showMessage('Class group created successfully!');
       } else {
         showMessage(data.message || 'Failed to create class group', 'error');
@@ -459,7 +462,10 @@ const TeacherDashboard = ({ user, onLogout }) => {
               <input
                 type="text"
                 value={formData.name}
-                onChange={(e) => setFormData(prev => ({...prev, name: e.target.value}))}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFormData(prev => ({...prev, name: value}));
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="e.g., Computer Science 10A, Mathematics Grade 12"
               />
@@ -471,7 +477,10 @@ const TeacherDashboard = ({ user, onLogout }) => {
               <input
                 type="text"
                 value={formData.section}
-                onChange={(e) => setFormData(prev => ({...prev, section: e.target.value}))}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFormData(prev => ({...prev, section: value}));
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="e.g., A, B, 10A, 12B"
               />
@@ -482,11 +491,76 @@ const TeacherDashboard = ({ user, onLogout }) => {
               </label>
               <textarea
                 value={formData.description}
-                onChange={(e) => setFormData(prev => ({...prev, description: e.target.value}))}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFormData(prev => ({...prev, description: value}));
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 rows="3"
                 placeholder="Optional description about the class..."
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Subjects
+              </label>
+              <div className="space-y-2">
+                {formData.subjects.map((subject, index) => (
+                  <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                    <span className="text-sm font-medium">{subject.name}</span>
+                    <span className="text-xs text-gray-500">({subject.code})</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const updatedSubjects = formData.subjects.filter((_, i) => i !== index);
+                        setFormData(prev => ({...prev, subjects: updatedSubjects}));
+                      }}
+                      className="ml-auto text-red-500 hover:text-red-700"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Subject name"
+                    value={newSubject.name}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setNewSubject(prev => ({...prev, name: value}));
+                    }}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Code"
+                    value={newSubject.code}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setNewSubject(prev => ({...prev, code: value}));
+                    }}
+                    className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (newSubject.name.trim() && newSubject.code.trim()) {
+                        const updatedSubjects = [...formData.subjects, { 
+                          name: newSubject.name.trim(), 
+                          code: newSubject.code.trim() 
+                        }];
+                        setFormData(prev => ({...prev, subjects: updatedSubjects}));
+                        setNewSubject({ name: '', code: '' });
+                      }
+                    }}
+                    disabled={!newSubject.name.trim() || !newSubject.code.trim()}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </div>
             <div className="flex gap-3 pt-2">
               <button
@@ -498,7 +572,10 @@ const TeacherDashboard = ({ user, onLogout }) => {
                 Create Class Group
               </button>
               <button
-                onClick={() => setShowCreateForm(false)}
+                onClick={() => {
+                  setShowCreateForm(false);
+                  setNewSubject({ name: '', code: '' });
+                }}
                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
               >
                 Cancel
