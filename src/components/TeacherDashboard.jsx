@@ -33,7 +33,6 @@ const TeacherDashboard = ({ user, onLogout }) => {
   useEffect(() => {
     if (user && user.role === 'teacher') {
       fetchClassGroups();
-      fetchDashboardStats();
     }
   }, [user]);
 
@@ -84,7 +83,9 @@ const TeacherDashboard = ({ user, onLogout }) => {
       
       const data = await response.json();
       if (data.success) {
-        setClassGroups(data.classGroups || []);
+        const groups = data.classGroups || [];
+        setClassGroups(groups);
+        calculateStats(groups); // Calculate stats after data is fetched
       } else {
         console.error('Failed to fetch class groups:', data.message);
       }
@@ -94,18 +95,18 @@ const TeacherDashboard = ({ user, onLogout }) => {
     }
   };
 
-  const fetchDashboardStats = async () => {
-    try {
-      const totalClasses = classGroups.length;
-      setStats({
-        totalClasses: totalClasses,
-        totalLectures: 0, // Will be implemented with real API
-        avgAttendance: 0, // Will be implemented with real API
-        activeStudents: classGroups.reduce((sum, group) => sum + (group.studentCount || 0), 0)
-      });
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    }
+  const calculateStats = (groups) => {
+    const totalClasses = groups.length;
+    const activeStudents = groups.reduce((sum, group) => {
+      return sum + (group.students ? group.students.length : 0);
+    }, 0);
+    
+    setStats({
+      totalClasses: totalClasses,
+      totalLectures: 0, // Will be implemented with real API
+      avgAttendance: 0, // Will be implemented with real API
+      activeStudents: activeStudents
+    });
   };
 
   const createClassGroup = async () => {
@@ -281,7 +282,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Students</p>
               <p className="text-2xl font-bold text-gray-900">
-                {classGroups.reduce((sum, group) => sum + (group.studentCount || 0), 0)}
+                {stats.activeStudents}
               </p>
             </div>
           </div>
@@ -354,7 +355,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
                 <div className="flex-1">
                   <h4 className="font-medium text-gray-900">{group.name}</h4>
                   <p className="text-sm text-gray-500">
-                    {group.studentCount || 0} students • Code: {group.groupCode}
+                    {group.students ? group.students.length : 0} students • Code: {group.groupCode}
                   </p>
                   {group.description && (
                     <p className="text-xs text-gray-400 mt-1">{group.description}</p>
@@ -497,7 +498,7 @@ const TeacherDashboard = ({ user, onLogout }) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
                 <p className="text-gray-500">Students</p>
-                <p className="font-medium">{group.studentCount || 0}</p>
+                <p className="font-medium">{group.students ? group.students.length : 0}</p>
               </div>
               <div>
                 <p className="text-gray-500">Group Code</p>
