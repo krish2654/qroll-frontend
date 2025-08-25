@@ -1,1756 +1,855 @@
+// src/components/TeacherDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { 
-  Plus, 
-  Users, 
-  BookOpen, 
-  Calendar, 
-  BarChart3, 
-  Settings,
-  Search,
-  Filter,
-  MoreVertical,
-  Edit3,
-  Trash2,
-  LogOut,
-  Bell,
-  MapPin,
-  Clock,
-  Copy,
-  ChevronRight,
-  School,
-  MessageSquare,
-  Loader,
-  CheckCircle,
-  AlertCircle,
-  X,
-  QrCode,
-  TrendingUp,
-  Activity,
-  Star,
-  Globe,
-  Shield,
-  Play,
-  Pause,
-  Download,
-  Upload,
-  FileText,
-  Image,
-  Video,
-  Link,
-  Eye,
-  Calendar as CalendarIcon,
-  Monitor
+  Home, BookOpen, Users, Calendar, BarChart3, Settings, 
+  LogOut, Plus, QrCode, Clock, UserCheck, TrendingUp,
+  Bell, Search, MoreHorizontal, Play, Square, 
+  Eye, Download, Upload, Loader, AlertCircle,
+  Copy, CheckCircle, RefreshCw, X
 } from 'lucide-react';
 
-const TeachersDashboard = () => {
-  // Mock user data - would come from props in real app
-  const [user] = useState({
-    name: "Dr. Sarah Wilson",
-    email: "sarah.wilson@college.edu",
-    profilePicture: "https://ui-avatars.com/api/?name=Sarah+Wilson&background=3b82f6&color=fff",
-    role: "teacher",
-    department: "Computer Science"
-  });
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-  // State for class groups with lectures
-  const [classGroups, setClassGroups] = useState([
-    {
-      _id: "1",
-      name: "TY.IT",
-      description: "Third Year Information Technology",
-      groupCode: "TYIT24",
-      classes: [
-        {
-          _id: "c1",
-          subject: "Data Structures & Algorithms",
-          studentCount: 45,
-          schedule: { days: ["Monday", "Wednesday", "Friday"], startTime: "09:00", endTime: "10:30", room: "Lab 1" },
-          lastSession: "2024-08-22",
-          attendanceRate: 89,
-          isActive: true,
-          lectures: [
-            {
-              _id: "l1",
-              title: "Introduction to Trees",
-              date: "2024-08-23",
-              startTime: "09:00",
-              endTime: "10:30",
-              isActive: true,
-              qrCode: "QR_DSA_TREES_20240823",
-              attendees: 42,
-              files: [
-                { name: "Trees_Notes.pdf", type: "pdf", size: "2.4 MB", uploadedAt: "2024-08-22" },
-                { name: "Tree_Examples.jpg", type: "image", size: "1.2 MB", uploadedAt: "2024-08-22" }
-              ]
-            },
-            {
-              _id: "l2",
-              title: "Binary Search Trees",
-              date: "2024-08-21",
-              startTime: "09:00",
-              endTime: "10:30",
-              isActive: false,
-              qrCode: "QR_DSA_BST_20240821",
-              attendees: 40,
-              files: [
-                { name: "BST_Implementation.cpp", type: "code", size: "856 bytes", uploadedAt: "2024-08-21" }
-              ]
-            }
-          ],
-          totalLectures: 15,
-          completedLectures: 2
-        },
-        {
-          _id: "c2", 
-          subject: "Database Management Systems",
-          studentCount: 42,
-          schedule: { days: ["Tuesday", "Thursday"], startTime: "11:00", endTime: "12:30", room: "Room 201" },
-          lastSession: "2024-08-21",
-          attendanceRate: 92,
-          isActive: true,
-          lectures: [
-            {
-              _id: "l3",
-              title: "SQL Queries",
-              date: "2024-08-22",
-              startTime: "11:00",
-              endTime: "12:30",
-              isActive: false,
-              qrCode: "QR_DBMS_SQL_20240822",
-              attendees: 39,
-              files: [
-                { name: "SQL_Queries.sql", type: "code", size: "1.1 KB", uploadedAt: "2024-08-22" },
-                { name: "Database_Schema.png", type: "image", size: "890 KB", uploadedAt: "2024-08-22" }
-              ]
-            }
-          ],
-          totalLectures: 12,
-          completedLectures: 1
-        }
-      ],
-      settings: {
-        joinPermissions: "college-only",
-        allowBroadcast: true,
-        autoApprove: true
-      },
-      totalStudents: 45,
-      createdAt: "2024-08-01"
-    },
-    {
-      _id: "2",
-      name: "SY.IT", 
-      description: "Second Year Information Technology",
-      groupCode: "SYIT24",
-      classes: [
-        {
-          _id: "c3",
-          subject: "Web Development",
-          studentCount: 38,
-          schedule: { days: ["Monday", "Wednesday"], startTime: "14:00", endTime: "15:30", room: "Lab 2" },
-          lastSession: "2024-08-22",
-          attendanceRate: 85,
-          isActive: true,
-          lectures: [],
-          totalLectures: 10,
-          completedLectures: 0
-        }
-      ],
-      settings: {
-        joinPermissions: "anywhere",
-        allowBroadcast: true, 
-        autoApprove: false
-      },
-      totalStudents: 38,
-      createdAt: "2024-07-15"
-    }
-  ]);
-
+const TeacherDashboard = ({ user, onLogout }) => {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [classGroups, setClassGroups] = useState([]);
+  const [activeLecture, setActiveLecture] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showCreateGroupForm, setShowCreateGroupForm] = useState(false);
-  const [showManageGroup, setShowManageGroup] = useState(null);
-  const [showSubjectDetails, setShowSubjectDetails] = useState(null);
-  const [notifications, setNotifications] = useState([
-    { id: 1, message: "45 students joined TY.IT group", time: "2 hours ago", type: "info" },
-    { id: 2, message: "Web Development class starts in 30 mins", time: "30 mins ago", type: "warning" }
-  ]);
-
-  // Calculate dashboard statistics
-  const totalGroups = classGroups.length;
-  const totalClasses = classGroups.reduce((sum, group) => sum + group.classes.length, 0);
-  const totalStudents = classGroups.reduce((sum, group) => sum + group.totalStudents, 0);
-  const avgAttendance = Math.round(
-    classGroups.reduce((sum, group) => 
-      sum + group.classes.reduce((classSum, cls) => classSum + cls.attendanceRate, 0), 0
-    ) / totalClasses
-  );
-
-  const filteredGroups = classGroups.filter(group =>
-    group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    group.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    group.classes.some(cls => cls.subject.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
-  const handleCreateGroup = (newGroup) => {
-    setClassGroups([newGroup, ...classGroups]);
-    setShowCreateGroupForm(false);
-  };
-
-  const copyGroupCode = (groupCode) => {
-    navigator.clipboard.writeText(groupCode);
-    setNotifications(prev => [{
-      id: Date.now(),
-      message: `Group code "${groupCode}" copied to clipboard!`,
-      time: "now",
-      type: "success"
-    }, ...prev.slice(0, 4)]);
-  };
-
-  const generateQRCode = (lectureId, subject) => {
-    // In real app, this would generate actual QR code and return join URL
-    const joinUrl = `https://qroll.duckdns.org/join-lecture/${lectureId}`;
-    return joinUrl;
-  };
-
-  const handleLogout = () => {
-    console.log("Logging out...");
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <h1 className="text-2xl font-bold text-blue-600">Qroll</h1>
-              </div>
-              <nav className="hidden md:ml-8 md:flex space-x-8">
-                <a href="#" className="text-blue-600 border-b-2 border-blue-600 px-1 pb-2 text-sm font-medium">
-                  Dashboard
-                </a>
-                <a href="#" className="text-gray-500 hover:text-gray-700 px-1 pb-2 text-sm font-medium">
-                  Analytics
-                </a>
-                <a href="#" className="text-gray-500 hover:text-gray-700 px-1 pb-2 text-sm font-medium">
-                  Reports
-                </a>
-              </nav>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              {/* Notifications */}
-              <div className="relative">
-                <button className="p-2 text-gray-400 hover:text-gray-600 relative">
-                  <Bell className="h-5 w-5" />
-                  {notifications.length > 0 && (
-                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                      {notifications.length}
-                    </span>
-                  )}
-                </button>
-              </div>
-
-              {/* User Menu */}
-              <div className="flex items-center space-x-3">
-                <img
-                  className="h-8 w-8 rounded-full ring-2 ring-blue-100"
-                  src={user.profilePicture}
-                  alt={user.name}
-                />
-                <div className="hidden sm:block">
-                  <p className="text-sm font-medium text-gray-700">{user.name}</p>
-                  <p className="text-xs text-gray-500">{user.department}</p>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="p-2 text-gray-400 hover:text-gray-600"
-                >
-                  <LogOut className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          {/* Page Header */}
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-gray-900">Teachers Dashboard</h2>
-            <p className="text-gray-600 mt-2">Manage your class groups and track attendance across multiple subjects</p>
-          </div>
-
-          {/* Error Display */}
-          {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
-              <AlertCircle className="h-5 w-5 mr-3" />
-              {error}
-            </div>
-          )}
-
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <School className="h-8 w-8 text-blue-600" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Class Groups</dt>
-                    <dd className="text-2xl font-bold text-gray-900">{totalGroups}</dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <BookOpen className="h-8 w-8 text-green-600" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Total Subjects</dt>
-                    <dd className="text-2xl font-bold text-gray-900">{totalClasses}</dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <Users className="h-8 w-8 text-purple-600" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Total Students</dt>
-                    <dd className="text-2xl font-bold text-gray-900">{totalStudents}</dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center">
-                <div className="flex-shrink-0">
-                  <TrendingUp className="h-8 w-8 text-orange-600" />
-                </div>
-                <div className="ml-5 w-0 flex-1">
-                  <dl>
-                    <dt className="text-sm font-medium text-gray-500 truncate">Avg Attendance</dt>
-                    <dd className="text-2xl font-bold text-gray-900">{avgAttendance}%</dd>
-                  </dl>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Class Groups Section */}
-          <div className="bg-white shadow-sm rounded-lg border border-gray-200">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium text-gray-900">Class Groups</h3>
-                <button
-                  onClick={() => setShowCreateGroupForm(true)}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Group
-                </button>
-              </div>
-              
-              {/* Search and Filter */}
-              <div className="mt-4 flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <input
-                      type="text"
-                      placeholder="Search groups or subjects..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 w-full"
-                    />
-                  </div>
-                </div>
-                <button className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filter
-                </button>
-              </div>
-            </div>
-
-            {/* Groups List */}
-            <div className="divide-y divide-gray-200">
-              {filteredGroups.length === 0 ? (
-                <div className="px-6 py-12 text-center">
-                  <School className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">No class groups found</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    {classGroups.length === 0 
-                      ? "Get started by creating your first class group."
-                      : "Try adjusting your search terms."
-                    }
-                  </p>
-                  {classGroups.length === 0 && (
-                    <div className="mt-6">
-                      <button
-                        onClick={() => setShowCreateGroupForm(true)}
-                        className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Create Group
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                filteredGroups.map((group) => (
-                  <div key={group._id} className="px-6 py-6 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-3 mb-3">
-                          <div className="flex-shrink-0">
-                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                              <School className="w-6 h-6 text-white" />
-                            </div>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center space-x-2">
-                              <h4 className="text-lg font-semibold text-gray-900">{group.name}</h4>
-                              <span className={`px-2 py-1 text-xs rounded-full flex items-center ${
-                                group.settings.joinPermissions === 'college-only' 
-                                  ? 'bg-blue-100 text-blue-700' 
-                                  : 'bg-green-100 text-green-700'
-                              }`}>
-                                {group.settings.joinPermissions === 'college-only' ? (
-                                  <>
-                                    <Shield className="w-3 h-3 mr-1" />
-                                    College Only
-                                  </>
-                                ) : (
-                                  <>
-                                    <Globe className="w-3 h-3 mr-1" />
-                                    Anywhere
-                                  </>
-                                )}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-600 mt-1">{group.description}</p>
-                            <div className="flex items-center space-x-4 mt-2">
-                              <span className="text-sm text-gray-500">{group.totalStudents} students</span>
-                              <span className="text-gray-300">•</span>
-                              <span className="text-sm text-gray-500">{group.classes.length} subjects</span>
-                              <span className="text-gray-300">•</span>
-                              <button
-                                onClick={() => copyGroupCode(group.groupCode)}
-                                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                              >
-                                Code: {group.groupCode}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Subjects in this group */}
-                        <div className="ml-15">
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                            {group.classes.map((cls) => (
-                              <div key={cls._id} className="bg-gray-50 rounded-lg p-3">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex-1 min-w-0">
-                                    <h5 className="text-sm font-medium text-gray-900 truncate">{cls.subject}</h5>
-                                    <div className="flex items-center space-x-3 mt-1">
-                                      <span className="text-xs text-gray-500">{cls.studentCount} students</span>
-                                      <span className="text-xs text-gray-500">
-                                        {cls.attendanceRate}% attendance
-                                      </span>
-                                      {cls.schedule.room && (
-                                        <span className="text-xs text-gray-500">{cls.schedule.room}</span>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center space-x-2 mt-1">
-                                      <span className="text-xs text-blue-600">
-                                        {cls.completedLectures || 0}/{cls.totalLectures || 0} lectures
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center space-x-1">
-                                    <button 
-                                      onClick={() => setShowSubjectDetails({...cls, groupId: group._id, groupName: group.name})}
-                                      className="p-1 text-gray-400 hover:text-blue-600 rounded"
-                                      title="Manage Lectures"
-                                    >
-                                      <Calendar className="h-4 w-4" />
-                                    </button>
-                                    <button 
-                                      onClick={() => setShowSubjectDetails({...cls, groupId: group._id, groupName: group.name, showAnalytics: true})}
-                                      className="p-1 text-gray-400 hover:text-green-600 rounded"
-                                      title="View Analytics"
-                                    >
-                                      <BarChart3 className="h-4 w-4" />
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center space-x-2 ml-4">
-                        <button 
-                          onClick={() => setShowManageGroup(group)}
-                          className="p-2 text-gray-400 hover:text-blue-600 rounded-full hover:bg-blue-50"
-                        >
-                          <Settings className="h-4 w-4" />
-                        </button>
-                        <button className="p-2 text-gray-400 hover:text-green-600 rounded-full hover:bg-green-50">
-                          <MessageSquare className="h-4 w-4" />
-                        </button>
-                        <button className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100">
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      </main>
-
-      {/* Create Group Modal */}
-      {showCreateGroupForm && (
-        <CreateGroupModal
-          onClose={() => setShowCreateGroupForm(false)}
-          onGroupCreated={handleCreateGroup}
-        />
-      )}
-
-      {/* Manage Group Modal */}
-      {showManageGroup && (
-        <ManageGroupModal
-          group={showManageGroup}
-          onClose={() => setShowManageGroup(null)}
-          onGroupUpdated={(updatedGroup) => {
-            setClassGroups(prev => prev.map(g => 
-              g._id === updatedGroup._id ? updatedGroup : g
-            ));
-            setShowManageGroup(null);
-          }}
-          copyGroupCode={copyGroupCode}
-        />
-      )}
-
-      {/* Subject Details Modal */}
-      {showSubjectDetails && (
-        <SubjectDetailsModal
-          subject={showSubjectDetails}
-          onClose={() => setShowSubjectDetails(null)}
-          onSubjectUpdated={(updatedSubject) => {
-            setClassGroups(prev => prev.map(group => ({
-              ...group,
-              classes: group.classes.map(cls => 
-                cls._id === updatedSubject._id ? updatedSubject : cls
-              )
-            })));
-            setShowSubjectDetails(null);
-          }}
-          generateQRCode={generateQRCode}
-        />
-      )}
-    </div>
-  );
-};
-
-// Create Group Modal Component
-const CreateGroupModal = ({ onClose, onGroupCreated }) => {
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    settings: {
-      joinPermissions: 'college-only',
-      allowBroadcast: true,
-      autoApprove: true
-    }
+  const [success, setSuccess] = useState('');
+  const [qrCode, setQrCode] = useState('');
+  const [attendanceCount, setAttendanceCount] = useState(0);
+  const [attendanceList, setAttendanceList] = useState([]);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [formData, setFormData] = useState({ name: '', description: '' });
+  const [stats, setStats] = useState({
+    totalClasses: 0,
+    totalLectures: 0,
+    avgAttendance: 0,
+    activeStudents: 0
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  // Fetch initial data when component mounts
+  useEffect(() => {
+    if (user && user.role === 'teacher') {
+      fetchClassGroups();
+      fetchDashboardStats();
+    }
+  }, [user]);
 
+  // Auto-refresh active lecture QR code and attendance
+  useEffect(() => {
+    let interval;
+    if (activeLecture && activeLecture.isActive) {
+      interval = setInterval(() => {
+        refreshLectureData();
+      }, 5000); // Refresh every 5 seconds
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [activeLecture]);
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('qroll_token');
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    };
+  };
+
+  const showMessage = (message, type = 'success') => {
+    if (type === 'error') {
+      setError(message);
+      setSuccess('');
+    } else {
+      setSuccess(message);
+      setError('');
+    }
+    setTimeout(() => {
+      setError('');
+      setSuccess('');
+    }, 5000);
+  };
+
+  const fetchClassGroups = async () => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await fetch(`${API_BASE_URL}/class-groups/my-groups`, {
+        headers: getAuthHeaders()
+      });
       
-      const newGroup = {
-        _id: Date.now().toString(),
-        ...formData,
-        groupCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
-        classes: [],
-        totalStudents: 0,
-        createdAt: new Date().toISOString()
-      };
-
-      onGroupCreated(newGroup);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      if (data.success) {
+        setClassGroups(data.classGroups || []);
+      } else {
+        console.error('Failed to fetch class groups:', data.message);
+      }
     } catch (error) {
-      setError('Failed to create group. Please try again.');
+      console.error('Error fetching class groups:', error);
+      // Don't show error to user for background fetch
+    }
+  };
+
+  const fetchDashboardStats = async () => {
+    try {
+      const totalClasses = classGroups.length;
+      setStats({
+        totalClasses: totalClasses,
+        totalLectures: 0, // Will be implemented with real API
+        avgAttendance: 0, // Will be implemented with real API
+        activeStudents: classGroups.reduce((sum, group) => sum + (group.studentCount || 0), 0)
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
+  const createClassGroup = async () => {
+    if (!formData.name.trim()) {
+      showMessage('Please enter a class name', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/class-groups/create`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          description: formData.description.trim()
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        await fetchClassGroups();
+        setShowCreateForm(false);
+        setFormData({ name: '', description: '' });
+        showMessage('Class group created successfully!');
+      } else {
+        showMessage(data.message || 'Failed to create class group', 'error');
+      }
+    } catch (error) {
+      console.error('Error creating class group:', error);
+      showMessage('Failed to create class group. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-lg shadow-lg rounded-md bg-white">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium text-gray-900">Create New Class Group</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        {error && (
-          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded flex items-center">
-            <AlertCircle className="h-5 w-5 mr-2" />
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Group Name *</label>
-            <input
-              type="text"
-              required
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="e.g., TY.IT, SY.CS, FY.BCA"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Description</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              rows={3}
-              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Brief description of the class group..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">Join Permissions</label>
-            <div className="space-y-3">
-              <div className="flex items-center">
-                <input
-                  type="radio"
-                  id="college-only"
-                  name="joinPermissions"
-                  value="college-only"
-                  checked={formData.settings.joinPermissions === 'college-only'}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    settings: { ...prev.settings, joinPermissions: e.target.value }
-                  }))}
-                  className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                />
-                <label htmlFor="college-only" className="ml-3 text-sm text-gray-700">
-                  <div className="flex items-center">
-                    <Shield className="w-4 h-4 mr-2 text-blue-600" />
-                    <div>
-                      <div className="font-medium">College Only</div>
-                      <div className="text-gray-500">Students must be within campus radius to join</div>
-                    </div>
-                  </div>
-                </label>
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="radio"
-                  id="anywhere"
-                  name="joinPermissions"
-                  value="anywhere"
-                  checked={formData.settings.joinPermissions === 'anywhere'}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    settings: { ...prev.settings, joinPermissions: e.target.value }
-                  }))}
-                  className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                />
-                <label htmlFor="anywhere" className="ml-3 text-sm text-gray-700">
-                  <div className="flex items-center">
-                    <Globe className="w-4 h-4 mr-2 text-green-600" />
-                    <div>
-                      <div className="font-medium">Anywhere</div>
-                      <div className="text-gray-500">Students can join from any location</div>
-                    </div>
-                  </div>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="allowBroadcast"
-                checked={formData.settings.allowBroadcast}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  settings: { ...prev.settings, allowBroadcast: e.target.checked }
-                }))}
-                className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <label htmlFor="allowBroadcast" className="ml-2 text-sm text-gray-700">
-                Enable broadcast messaging to all students
-              </label>
-            </div>
-
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="autoApprove"
-                checked={formData.settings.autoApprove}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  settings: { ...prev.settings, autoApprove: e.target.checked }
-                }))}
-                className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <label htmlFor="autoApprove" className="ml-2 text-sm text-gray-700">
-                Auto-approve student join requests
-              </label>
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-3 pt-6 border-t">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center"
-            >
-              {loading ? (
-                <>
-                  <Loader className="w-4 h-4 animate-spin mr-2" />
-                  Creating...
-                </>
-              ) : (
-                'Create Group'
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
-// Subject Details Modal with Lectures Management
-const SubjectDetailsModal = ({ subject, onClose, onSubjectUpdated, generateQRCode }) => {
-  const [activeTab, setActiveTab] = useState(subject.showAnalytics ? 'analytics' : 'lectures');
-  const [lectures, setLectures] = useState(subject.lectures || []);
-  const [showCreateLecture, setShowCreateLecture] = useState(false);
-  const [showQRModal, setShowQRModal] = useState(null);
-  const [activeLecture, setActiveLecture] = useState(null);
-
-  const tabs = [
-    { id: 'lectures', name: 'Lectures', icon: Calendar },
-    { id: 'files', name: 'Files & Notes', icon: FileText },
-    { id: 'analytics', name: 'Analytics', icon: BarChart3 }
-  ];
-
-  const handleCreateLecture = (lectureData) => {
-    const newLecture = {
-      _id: Date.now().toString(),
-      ...lectureData,
-      qrCode: `QR_${subject.subject.replace(/\s+/g, '_').toUpperCase()}_${Date.now()}`,
-      attendees: 0,
-      files: [],
-      isActive: false
-    };
+  const startLecture = async (classId, className) => {
+    setLoading(true);
+    setError('');
     
-    setLectures([newLecture, ...lectures]);
-    setShowCreateLecture(false);
-  };
-
-  const handleStartLecture = (lectureId) => {
-    setLectures(prev => prev.map(lecture => ({
-      ...lecture,
-      isActive: lecture._id === lectureId ? true : false
-    })));
-    setActiveLecture(lectureId);
-  };
-
-  const handleStopLecture = (lectureId) => {
-    setLectures(prev => prev.map(lecture => ({
-      ...lecture,
-      isActive: lecture._id === lectureId ? false : lecture.isActive
-    })));
-    setActiveLecture(null);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-10 mx-auto p-0 border w-11/12 max-w-6xl shadow-lg rounded-lg bg-white">
-        {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b">
-          <div>
-            <h3 className="text-lg font-medium text-gray-900">{subject.subject}</h3>
-            <p className="text-sm text-gray-500 mt-1">{subject.groupName} • {subject.studentCount} students</p>
-          </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        {/* Tabs */}
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8 px-6">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <tab.icon className="w-4 h-4 mr-2" />
-                {tab.name}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        {/* Tab Content */}
-        <div className="p-6 max-h-96 overflow-y-auto">
-          {activeTab === 'lectures' && (
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <h4 className="text-md font-medium text-gray-900">Lectures</h4>
-                <button
-                  onClick={() => setShowCreateLecture(true)}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Lecture
-                </button>
-              </div>
-
-              {showCreateLecture && (
-                <CreateLectureForm
-                  onCancel={() => setShowCreateLecture(false)}
-                  onSubmit={handleCreateLecture}
-                />
-              )}
-
-              <div className="space-y-4">
-                {lectures.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Calendar className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">No lectures yet</h3>
-                    <p className="mt-1 text-sm text-gray-500">Create your first lecture to get started.</p>
-                  </div>
-                ) : (
-                  lectures.map((lecture) => (
-                    <div key={lecture._id} className={`p-4 rounded-lg border-2 ${
-                      lecture.isActive ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-white'
-                    }`}>
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3">
-                            <h5 className="font-medium text-gray-900">{lecture.title}</h5>
-                            {lecture.isActive && (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                <div className="w-2 h-2 bg-green-400 rounded-full mr-1"></div>
-                                Live
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center space-x-4 mt-1 text-sm text-gray-500">
-                            <span>{lecture.date}</span>
-                            <span>{lecture.startTime} - {lecture.endTime}</span>
-                            <span>{lecture.attendees} attended</span>
-                            {lecture.files && lecture.files.length > 0 && (
-                              <span>{lecture.files.length} files</span>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          {lecture.isActive ? (
-                            <button
-                              onClick={() => handleStopLecture(lecture._id)}
-                              className="inline-flex items-center px-3 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100"
-                            >
-                              <Pause className="w-4 h-4 mr-1" />
-                              Stop
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleStartLecture(lecture._id)}
-                              className="inline-flex items-center px-3 py-2 border border-green-300 text-sm font-medium rounded-md text-green-700 bg-green-50 hover:bg-green-100"
-                            >
-                              <Play className="w-4 h-4 mr-1" />
-                              Start
-                            </button>
-                          )}
-                          
-                          <button
-                            onClick={() => setShowQRModal(lecture)}
-                            className="inline-flex items-center px-3 py-2 border border-blue-300 text-sm font-medium rounded-md text-blue-700 bg-blue-50 hover:bg-blue-100"
-                          >
-                            <QrCode className="w-4 h-4 mr-1" />
-                            QR Code
-                          </button>
-                          
-                          <button className="p-2 text-gray-400 hover:text-gray-600 rounded">
-                            <MoreVertical className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'files' && (
-            <FilesTab lectures={lectures} setLectures={setLectures} />
-          )}
-
-          {activeTab === 'analytics' && (
-            <AnalyticsTab subject={subject} lectures={lectures} />
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-end space-x-3 px-6 py-4 border-t bg-gray-50">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-
-      {/* QR Code Modal */}
-      {showQRModal && (
-        <QRCodeModal
-          lecture={showQRModal}
-          subject={subject}
-          onClose={() => setShowQRModal(null)}
-          generateQRCode={generateQRCode}
-        />
-      )}
-    </div>
-  );
-};
-
-// Create Lecture Form Component
-const CreateLectureForm = ({ onCancel, onSubmit }) => {
-  const [formData, setFormData] = useState({
-    title: '',
-    date: new Date().toISOString().split('T')[0],
-    startTime: '09:00',
-    endTime: '10:30'
-  });
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(formData);
-  };
-
-  return (
-    <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-      <h5 className="font-medium text-gray-900 mb-4">Create New Lecture</h5>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Lecture Title *</label>
-            <input
-              type="text"
-              required
-              value={formData.title}
-              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              placeholder="e.g., Introduction to Arrays"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Date *</label>
-            <input
-              type="date"
-              required
-              value={formData.date}
-              onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Start Time *</label>
-            <input
-              type="time"
-              required
-              value={formData.startTime}
-              onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
-              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">End Time *</label>
-            <input
-              type="time"
-              required
-              value={formData.endTime}
-              onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
-              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-        </div>
-        
-        <div className="flex space-x-3">
-          <button
-            type="submit"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-          >
-            Create Lecture
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-};
-
-// QR Code Modal Component
-const QRCodeModal = ({ lecture, subject, onClose, generateQRCode }) => {
-  const joinUrl = generateQRCode(lecture._id, subject.subject);
-  
-  const copyJoinUrl = () => {
-    navigator.clipboard.writeText(joinUrl);
-    alert('Join URL copied to clipboard!');
-  };
-
-  return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-6 border w-11/12 max-w-md shadow-lg rounded-lg bg-white">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-medium text-gray-900">Lecture QR Code</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        <div className="text-center">
-          <div className="mb-4">
-            <h4 className="font-medium text-gray-900">{lecture.title}</h4>
-            <p className="text-sm text-gray-500">{subject.subject}</p>
-            <p className="text-sm text-gray-500">{lecture.date} • {lecture.startTime} - {lecture.endTime}</p>
-          </div>
-
-          {/* QR Code Placeholder */}
-          <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-8 mb-4">
-            <QrCode className="mx-auto h-24 w-24 text-gray-400 mb-4" />
-            <p className="text-sm text-gray-500">QR Code for lecture attendance</p>
-            <p className="text-xs text-gray-400 mt-2">Students scan this to join the lecture</p>
-          </div>
-
-          <div className="space-y-3">
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-500 mb-1">Join URL:</p>
-              <p className="text-sm font-mono text-gray-700 break-all">{joinUrl}</p>
-            </div>
-
-            <div className="flex space-x-2">
-              <button
-                onClick={copyJoinUrl}
-                className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-              >
-                <Copy className="w-4 h-4 mr-2" />
-                Copy URL
-              </button>
-              <button className="flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                <Download className="w-4 h-4 mr-2" />
-                Download QR
-              </button>
-            </div>
-          </div>
-
-          {lecture.isActive && (
-            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-              <div className="flex items-center justify-center">
-                <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
-                <span className="text-sm font-medium text-green-800">Lecture is Live</span>
-              </div>
-              <p className="text-xs text-green-600 mt-1">Students can scan QR code to mark attendance</p>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Files Tab Component
-const FilesTab = ({ lectures, setLectures }) => {
-  const [selectedLecture, setSelectedLecture] = useState(lectures[0]?._id || '');
-  const [dragOver, setDragOver] = useState(false);
-
-  const currentLecture = lectures.find(l => l._id === selectedLecture);
-  const files = currentLecture?.files || [];
-
-  const handleFileUpload = (e) => {
-    const uploadedFiles = Array.from(e.target.files);
-    uploadedFiles.forEach(file => {
-      const newFile = {
-        name: file.name,
-        type: getFileType(file.name),
-        size: formatFileSize(file.size),
-        uploadedAt: new Date().toISOString().split('T')[0]
-      };
+    try {
+      const response = await fetch(`${API_BASE_URL}/lectures/start`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ 
+          classId: classId,
+          duration: 60 
+        })
+      });
       
-      setLectures(prev => prev.map(lecture => 
-        lecture._id === selectedLecture
-          ? { ...lecture, files: [...(lecture.files || []), newFile] }
-          : lecture
-      ));
+      const data = await response.json();
+      if (data.success) {
+        setActiveLecture({
+          ...data.lecture,
+          className: className
+        });
+        setQrCode(data.lecture.qrCode);
+        setAttendanceCount(data.lecture.studentsJoined || 0);
+        setAttendanceList([]);
+        setActiveTab('lecture-live');
+        showMessage(`Lecture started for ${className}!`);
+      } else {
+        showMessage(data.message || 'Failed to start lecture', 'error');
+      }
+    } catch (error) {
+      console.error('Error starting lecture:', error);
+      showMessage('Failed to start lecture. Please try again.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const stopLecture = async () => {
+    if (!activeLecture) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/lectures/stop/${activeLecture.id}`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        showMessage(`Lecture ended. ${attendanceCount} students attended.`);
+        setActiveLecture(null);
+        setQrCode('');
+        setAttendanceCount(0);
+        setAttendanceList([]);
+        setActiveTab('dashboard');
+      } else {
+        showMessage('Failed to stop lecture', 'error');
+      }
+    } catch (error) {
+      console.error('Error stopping lecture:', error);
+      showMessage('Failed to stop lecture', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshLectureData = async () => {
+    if (!activeLecture) return;
+    
+    try {
+      // Refresh QR code
+      const qrResponse = await fetch(`${API_BASE_URL}/lectures/${activeLecture.id}/qr`, {
+        headers: getAuthHeaders()
+      });
+      
+      if (qrResponse.ok) {
+        const qrData = await qrResponse.json();
+        if (qrData.success) {
+          setQrCode(qrData.lecture.qrCode);
+          setAttendanceCount(qrData.lecture.studentsJoined || 0);
+        }
+      }
+
+      // Fetch attendance list
+      const attendanceResponse = await fetch(`${API_BASE_URL}/lectures/${activeLecture.id}/attendance`, {
+        headers: getAuthHeaders()
+      });
+      
+      if (attendanceResponse.ok) {
+        const attendanceData = await attendanceResponse.json();
+        if (attendanceData.success) {
+          setAttendanceList(attendanceData.attendance || []);
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing lecture data:', error);
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text).then(() => {
+      showMessage('Copied to clipboard!');
+    }).catch(() => {
+      showMessage('Failed to copy', 'error');
     });
   };
 
-  const getFileType = (filename) => {
-    const ext = filename.split('.').pop().toLowerCase();
-    if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) return 'image';
-    if (['pdf'].includes(ext)) return 'pdf';
-    if (['mp4', 'avi', 'mov'].includes(ext)) return 'video';
-    if (['cpp', 'java', 'py', 'js'].includes(ext)) return 'code';
-    return 'document';
-  };
+  const sidebar = [
+    { id: 'dashboard', icon: Home, label: 'Dashboard' },
+    { id: 'classes', icon: BookOpen, label: 'Classes' },
+    { id: 'lectures', icon: Calendar, label: 'Lectures' },
+    { id: 'attendance', icon: UserCheck, label: 'Attendance' },
+    { id: 'reports', icon: BarChart3, label: 'Reports' },
+    { id: 'settings', icon: Settings, label: 'Settings' }
+  ];
 
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const getFileIcon = (type) => {
-    switch (type) {
-      case 'image': return <Image className="w-5 h-5 text-green-600" />;
-      case 'pdf': return <FileText className="w-5 h-5 text-red-600" />;
-      case 'video': return <Video className="w-5 h-5 text-purple-600" />;
-      case 'code': return <Monitor className="w-5 h-5 text-blue-600" />;
-      default: return <FileText className="w-5 h-5 text-gray-600" />;
-    }
-  };
-
-  return (
-    <div>
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Select Lecture</label>
-        <select
-          value={selectedLecture}
-          onChange={(e) => setSelectedLecture(e.target.value)}
-          className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-        >
-          {lectures.map(lecture => (
-            <option key={lecture._id} value={lecture._id}>
-              {lecture.title} - {lecture.date}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {selectedLecture && (
-        <div>
-          {/* File Upload Area */}
-          <div
-            className={`border-2 border-dashed rounded-lg p-6 text-center mb-6 transition-colors ${
-              dragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300'
-            }`}
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragOver(false);
-              handleFileUpload(e);
-            }}
-          >
-            <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Upload Files</h3>
-            <p className="text-gray-500 mb-4">Drag and drop files here, or click to select</p>
-            <label className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 cursor-pointer">
-              <Upload className="w-4 h-4 mr-2" />
-              Choose Files
-              <input
-                type="file"
-                multiple
-                className="sr-only"
-                onChange={handleFileUpload}
-                accept=".pdf,.jpg,.jpeg,.png,.mp4,.cpp,.java,.py,.js,.txt,.doc,.docx,.ppt,.pptx"
-              />
-            </label>
-          </div>
-
-          {/* Files List */}
-          <div>
-            <h4 className="font-medium text-gray-900 mb-4">Uploaded Files ({files.length})</h4>
-            {files.length === 0 ? (
-              <div className="text-center py-8">
-                <FileText className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No files uploaded</h3>
-                <p className="mt-1 text-sm text-gray-500">Upload notes, assignments, or other materials for this lecture.</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {files.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      {getFileIcon(file.type)}
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                        <p className="text-xs text-gray-500">{file.size} • Uploaded on {file.uploadedAt}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <button className="p-1 text-gray-400 hover:text-blue-600">
-                        <Download className="w-4 h-4" />
-                      </button>
-                      <button className="p-1 text-gray-400 hover:text-red-600">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Analytics Tab Component
-const AnalyticsTab = ({ subject, lectures }) => {
-  const totalLectures = lectures.length;
-  const completedLectures = lectures.filter(l => !l.isActive && l.attendees > 0).length;
-  const avgAttendance = totalLectures > 0 
-    ? Math.round(lectures.reduce((sum, l) => sum + (l.attendees || 0), 0) / totalLectures)
-    : 0;
-  const totalFiles = lectures.reduce((sum, l) => sum + (l.files?.length || 0), 0);
-
-  return (
+  const DashboardView = () => (
     <div className="space-y-6">
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-blue-50 p-4 rounded-lg">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <Calendar className="h-8 w-8 text-blue-600" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-blue-600">Total Lectures</p>
-              <p className="text-2xl font-bold text-blue-900">{totalLectures}</p>
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <BookOpen className="w-6 h-6 text-blue-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Classes</p>
+              <p className="text-2xl font-bold text-gray-900">{classGroups.length}</p>
             </div>
           </div>
         </div>
-
-        <div className="bg-green-50 p-4 rounded-lg">
+        
+        <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <CheckCircle className="h-8 w-8 text-green-600" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-green-600">Completed</p>
-              <p className="text-2xl font-bold text-green-900">{completedLectures}</p>
+            <div className="p-2 bg-green-100 rounded-lg">
+              <Calendar className="w-6 h-6 text-green-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Students</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {classGroups.reduce((sum, group) => sum + (group.studentCount || 0), 0)}
+              </p>
             </div>
           </div>
         </div>
-
-        <div className="bg-purple-50 p-4 rounded-lg">
+        
+        <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <Users className="h-8 w-8 text-purple-600" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-purple-600">Avg Attendance</p>
-              <p className="text-2xl font-bold text-purple-900">{avgAttendance}</p>
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <TrendingUp className="w-6 h-6 text-orange-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Active Groups</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {classGroups.filter(group => group.isActive !== false).length}
+              </p>
             </div>
           </div>
         </div>
-
-        <div className="bg-orange-50 p-4 rounded-lg">
+        
+        <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center">
-            <FileText className="h-8 w-8 text-orange-600" />
-            <div className="ml-3">
-              <p className="text-sm font-medium text-orange-600">Total Files</p>
-              <p className="text-2xl font-bold text-orange-900">{totalFiles}</p>
+            <div className="p-2 bg-purple-100 rounded-lg">
+              <QrCode className="w-6 h-6 text-purple-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Live Lectures</p>
+              <p className="text-2xl font-bold text-gray-900">{activeLecture ? 1 : 0}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Recent Lectures */}
-      <div>
-        <h4 className="font-medium text-gray-900 mb-4">Recent Lectures</h4>
-        {lectures.length === 0 ? (
-          <div className="text-center py-8">
-            <BarChart3 className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No data available</h3>
-            <p className="mt-1 text-sm text-gray-500">Create lectures to see analytics and attendance data.</p>
-          </div>
-        ) : (
+      {/* Quick Actions */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <button 
+            onClick={() => setActiveTab('classes')}
+            className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors text-center"
+          >
+            <Plus className="w-6 h-6 mx-auto mb-2 text-gray-400" />
+            <p className="text-sm font-medium text-gray-600">Create New Class</p>
+          </button>
+          
+          <button 
+            onClick={() => setActiveTab('lectures')}
+            className="p-4 bg-green-50 border-2 border-green-200 rounded-lg hover:bg-green-100 transition-colors text-center"
+          >
+            <Play className="w-6 h-6 mx-auto mb-2 text-green-600" />
+            <p className="text-sm font-medium text-green-700">View Lectures</p>
+          </button>
+          
+          <button 
+            onClick={() => setActiveTab('reports')}
+            className="p-4 bg-purple-50 border-2 border-purple-200 rounded-lg hover:bg-purple-100 transition-colors text-center"
+          >
+            <BarChart3 className="w-6 h-6 mx-auto mb-2 text-purple-600" />
+            <p className="text-sm font-medium text-purple-700">View Reports</p>
+          </button>
+        </div>
+      </div>
+
+      {/* Your Classes */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Your Classes</h3>
+        {classGroups.length > 0 ? (
           <div className="space-y-3">
-            {lectures.slice(0, 5).map((lecture) => (
-              <div key={lecture._id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-900">{lecture.title}</p>
-                  <p className="text-sm text-gray-500">{lecture.date} • {lecture.startTime}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">{lecture.attendees}/{subject.studentCount}</p>
-                  <p className="text-xs text-gray-500">
-                    {Math.round((lecture.attendees / subject.studentCount) * 100)}% attendance
+            {classGroups.slice(0, 5).map((group) => (
+              <div key={group._id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{group.name}</h4>
+                  <p className="text-sm text-gray-500">
+                    {group.studentCount || 0} students • Code: {group.groupCode}
                   </p>
+                  {group.description && (
+                    <p className="text-xs text-gray-400 mt-1">{group.description}</p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => startLecture(group._id, group.name)}
+                    disabled={loading || activeLecture}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 text-sm"
+                  >
+                    {loading ? <Loader className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />}
+                    Start Lecture
+                  </button>
                 </div>
               </div>
             ))}
+            {classGroups.length > 5 && (
+              <div className="text-center pt-4">
+                <button 
+                  onClick={() => setActiveTab('classes')}
+                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                >
+                  View all {classGroups.length} classes →
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <BookOpen className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+            <p className="text-gray-500 mb-4">No classes yet. Create your first class to get started!</p>
+            <button 
+              onClick={() => setActiveTab('classes')}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Create Your First Class
+            </button>
           </div>
         )}
       </div>
     </div>
   );
-};
 
-// Manage Group Modal Component with Interactive Settings
-const ManageGroupModal = ({ group, onClose, onGroupUpdated, copyGroupCode }) => {
-  const [activeTab, setActiveTab] = useState('classes');
-  const [classes, setClasses] = useState(group.classes);
-  const [showAddSubject, setShowAddSubject] = useState(false);
-  const [newSubject, setNewSubject] = useState('');
-  const [settings, setSettings] = useState(group.settings);
-  const [broadcastMessage, setBroadcastMessage] = useState({
-    type: 'General Announcement',
-    subject: '',
-    message: ''
-  });
+  const ClassesView = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-gray-900">Manage Classes</h2>
+        <button 
+          onClick={() => setShowCreateForm(true)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+        >
+          <Plus className="w-4 h-4" />
+          New Class Group
+        </button>
+      </div>
 
-  const tabs = [
-    { id: 'classes', name: 'Subjects', icon: BookOpen },
-    { id: 'students', name: 'Students', icon: Users },
-    { id: 'settings', name: 'Settings', icon: Settings },
-    { id: 'broadcast', name: 'Broadcast', icon: MessageSquare }
-  ];
+      {showCreateForm && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium">Create New Class Group</h3>
+            <button 
+              onClick={() => setShowCreateForm(false)}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Class Name *
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="e.g., Computer Science 10A, Mathematics Grade 12"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                rows="3"
+                placeholder="Optional description about the class..."
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={createClassGroup}
+                disabled={loading || !formData.name.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {loading ? <Loader className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                Create Class Group
+              </button>
+              <button
+                onClick={() => setShowCreateForm(false)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-  const handleAddSubject = () => {
-    if (newSubject.trim()) {
-      const newClass = {
-        _id: Date.now().toString(),
-        subject: newSubject.trim(),
-        studentCount: 0,
-        schedule: { days: [], startTime: '', endTime: '', room: '' },
-        lastSession: null,
-        attendanceRate: 0,
-        isActive: true,
-        lectures: [],
-        totalLectures: 0,
-        completedLectures: 0
-      };
-      setClasses([...classes, newClass]);
-      setNewSubject('');
-      setShowAddSubject(false);
-    }
-  };
+      {/* Classes Grid */}
+      <div className="grid gap-6">
+        {classGroups.map((group) => (
+          <div key={group._id} className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex-1">
+                <h3 className="text-lg font-medium text-gray-900">{group.name}</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  {group.description || 'No description provided'}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => startLecture(group._id, group.name)}
+                  disabled={loading || activeLecture}
+                  className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50 flex items-center gap-1"
+                >
+                  <Play className="w-3 h-3" />
+                  Start Lecture
+                </button>
+                <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded">
+                  <MoreHorizontal className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <p className="text-gray-500">Students</p>
+                <p className="font-medium">{group.studentCount || 0}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Group Code</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium font-mono">{group.groupCode}</p>
+                  <button 
+                    onClick={() => copyToClipboard(group.groupCode)}
+                    className="p-1 hover:bg-gray-100 rounded"
+                  >
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+              <div>
+                <p className="text-gray-500">Created</p>
+                <p className="font-medium">{new Date(group.createdAt).toLocaleDateString()}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">Status</p>
+                <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                  Active
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
 
-  const handleRemoveSubject = (classId) => {
-    setClasses(classes.filter(cls => cls._id !== classId));
-  };
+      {classGroups.length === 0 && !showCreateForm && (
+        <div className="text-center py-12">
+          <BookOpen className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No Classes Yet</h3>
+          <p className="text-gray-500 mb-6">Create your first class group to start taking attendance.</p>
+          <button 
+            onClick={() => setShowCreateForm(true)}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+          >
+            Create Your First Class
+          </button>
+        </div>
+      )}
+    </div>
+  );
 
-  const handleSettingsUpdate = (newSettings) => {
-    setSettings(newSettings);
-  };
+  const LiveLectureView = () => (
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Live Lecture</h2>
+            {activeLecture && (
+              <p className="text-sm text-gray-600 mt-1">
+                {activeLecture.className} • Started {new Date(activeLecture.startTime).toLocaleTimeString()}
+              </p>
+            )}
+          </div>
+          <button 
+            onClick={stopLecture}
+            disabled={loading}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
+          >
+            {loading ? <Loader className="w-4 h-4 animate-spin" /> : <Square className="w-4 h-4" />}
+            End Lecture
+          </button>
+        </div>
 
-  const handleSendBroadcast = () => {
-    if (broadcastMessage.subject.trim() && broadcastMessage.message.trim()) {
-      // In real app, this would send API request
-      alert(`Broadcast sent to ${group.totalStudents} students!`);
-      setBroadcastMessage({
-        type: 'General Announcement',
-        subject: '',
-        message: ''
-      });
+        {activeLecture && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* QR Code Section */}
+            <div className="text-center">
+              <h3 className="text-lg font-medium mb-4">Attendance QR Code</h3>
+              <div className="bg-gray-50 p-6 rounded-lg border-2 border-dashed border-gray-300 inline-block">
+                {qrCode ? (
+                  <img src={qrCode} alt="Attendance QR Code" className="w-48 h-48 mx-auto" />
+                ) : (
+                  <div className="w-48 h-48 flex items-center justify-center">
+                    <Loader className="w-8 h-8 animate-spin text-gray-400" />
+                  </div>
+                )}
+              </div>
+              <p className="text-sm text-gray-600 mt-4 mb-2">
+                Students scan this QR code to mark attendance
+              </p>
+              <div className="flex gap-2 justify-center">
+                <button 
+                  onClick={refreshLectureData}
+                  className="px-3 py-1 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 flex items-center gap-1"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  Refresh
+                </button>
+                {activeLecture.joinUrl && (
+                  <button 
+                    onClick={() => copyToClipboard(activeLecture.joinUrl)}
+                    className="px-3 py-1 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 flex items-center gap-1"
+                  >
+                    <Copy className="w-3 h-3" />
+                    Copy Link
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Stats Section */}
+            <div>
+              <h3 className="text-lg font-medium mb-4">Live Statistics</h3>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg border border-green-200">
+                  <span className="text-green-800 font-medium">Students Present</span>
+                  <span className="font-bold text-green-900 text-2xl">{attendanceCount}</span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                  <span className="text-gray-600">Started At</span>
+                  <span className="font-medium">
+                    {new Date(activeLecture.startTime).toLocaleTimeString()}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                  <span className="text-gray-600">Duration</span>
+                  <span className="font-medium">
+                    {Math.floor((new Date() - new Date(activeLecture.startTime)) / 60000)} minutes
+                  </span>
+                </div>
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                  <span className="text-gray-600">QR Token</span>
+                  <span className="font-mono text-xs">{activeLecture.qrToken?.slice(-8)}...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Recent Attendance */}
+      {attendanceList.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-lg font-medium mb-4">Recent Check-ins</h3>
+          <div className="space-y-2 max-h-60 overflow-y-auto">
+            {attendanceList.slice().reverse().map((attendance, index) => (
+              <div key={attendance.id || index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <img 
+                    src={attendance.student?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(attendance.student?.name || 'Student')}&background=3b82f6&color=fff`}
+                    alt={attendance.student?.name || 'Student'}
+                    className="w-8 h-8 rounded-full"
+                  />
+                  <div>
+                    <p className="font-medium text-gray-900">{attendance.student?.name || 'Unknown Student'}</p>
+                    <p className="text-xs text-gray-500">{attendance.student?.email}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-green-600">Present</p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(attendance.markedAt).toLocaleTimeString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const ComingSoonView = ({ title, description, icon: Icon }) => (
+    <div className="space-y-6">
+      <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+      <div className="bg-white rounded-lg shadow p-8">
+        <div className="text-center py-8">
+          <Icon className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">{title}</h3>
+          <p className="text-gray-500 mb-6">{description}</p>
+          <div className="inline-flex px-4 py-2 bg-blue-100 text-blue-800 rounded-lg text-sm font-medium">
+            Coming Soon
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderActiveView = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return <DashboardView />;
+      case 'classes':
+        return <ClassesView />;
+      case 'lecture-live':
+        return <LiveLectureView />;
+      case 'lectures':
+        return <ComingSoonView 
+          title="Lecture History" 
+          description="View and manage your past and scheduled lectures."
+          icon={Calendar}
+        />;
+      case 'attendance':
+        return <ComingSoonView 
+          title="Attendance Reports" 
+          description="Detailed attendance analytics and student reports."
+          icon={UserCheck}
+        />;
+      case 'reports':
+        return <ComingSoonView 
+          title="Analytics & Reports" 
+          description="Comprehensive analytics, attendance trends, and detailed reports."
+          icon={BarChart3}
+        />;
+      case 'settings':
+        return <ComingSoonView 
+          title="Settings" 
+          description="Manage your profile, preferences, and class settings."
+          icon={Settings}
+        />;
+      default:
+        return <DashboardView />;
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-10 mx-auto p-0 border w-11/12 max-w-4xl shadow-lg rounded-lg bg-white">
-        {/* Header */}
-        <div className="flex justify-between items-center p-6 border-b">
-          <div>
-            <h3 className="text-lg font-medium text-gray-900">Manage {group.name}</h3>
-            <p className="text-sm text-gray-500 mt-1">{group.description}</p>
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Sidebar */}
+      <div className="w-64 bg-white shadow-lg flex flex-col">
+        <div className="p-6 border-b">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <UserCheck className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Qroll</h1>
+              <p className="text-xs text-gray-500">Teacher Dashboard</p>
+            </div>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-6 h-6" />
-          </button>
         </div>
 
-        {/* Tabs */}
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8 px-6">
-            {tabs.map((tab) => (
+        <nav className="flex-1 px-4 py-4">
+          {sidebar.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id || (activeTab === 'lecture-live' && item.id === 'lectures');
+            return (
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors mb-1 ${
+                  isActive
+                    ? 'bg-blue-50 text-blue-600 font-medium'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >
-                <tab.icon className="w-4 h-4 mr-2" />
-                {tab.name}
+                <Icon className="w-5 h-5" />
+                {item.label}
               </button>
-            ))}
-          </nav>
-        </div>
+            );
+          })}
+        </nav>
 
-        {/* Tab Content */}
-        <div className="p-6">
-          {activeTab === 'classes' && (
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h4 className="text-md font-medium text-gray-900">Subjects in {group.name}</h4>
-                <button
-                  onClick={() => setShowAddSubject(true)}
-                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-100 hover:bg-blue-200"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Subject
-                </button>
-              </div>
-
-              {showAddSubject && (
-                <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                  <div className="flex space-x-3">
-                    <input
-                      type="text"
-                      value={newSubject}
-                      onChange={(e) => setNewSubject(e.target.value)}
-                      placeholder="Enter subject name..."
-                      className="flex-1 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      onKeyPress={(e) => e.key === 'Enter' && handleAddSubject()}
-                    />
-                    <button
-                      onClick={handleAddSubject}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                    >
-                      Add
-                    </button>
-                    <button
-                      onClick={() => setShowAddSubject(false)}
-                      className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-3">
-                {classes.map((cls) => (
-                  <div key={cls._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex-1">
-                      <h5 className="font-medium text-gray-900">{cls.subject}</h5>
-                      <div className="flex items-center space-x-4 mt-1 text-sm text-gray-500">
-                        <span>{cls.studentCount} students</span>
-                        {cls.schedule.room && <span>{cls.schedule.room}</span>}
-                        {cls.attendanceRate > 0 && <span>{cls.attendanceRate}% attendance</span>}
-                        <span>{cls.completedLectures || 0}/{cls.totalLectures || 0} lectures</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <button className="p-2 text-gray-400 hover:text-blue-600 rounded" title="Manage Lectures">
-                        <Calendar className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 text-gray-400 hover:text-green-600 rounded" title="View Analytics">
-                        <BarChart3 className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleRemoveSubject(cls._id)}
-                        className="p-2 text-gray-400 hover:text-red-600 rounded"
-                        title="Remove Subject"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+        {/* User Profile Section */}
+        <div className="p-4 border-t bg-white">
+          <div className="flex items-center gap-3 mb-3">
+            <img 
+              src={user.profilePicture} 
+              alt={user.name}
+              className="w-8 h-8 rounded-full"
+              onError={(e) => {
+                e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=3b82f6&color=fff`;
+              }}
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
+              <p className="text-xs text-gray-500 truncate">{user.email}</p>
+              <p className="text-xs text-blue-600 font-medium">Teacher</p>
             </div>
-          )}
-
-          {activeTab === 'students' && (
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h4 className="text-md font-medium text-gray-900">Students in {group.name}</h4>
-                <div className="flex space-x-2">
-                  <button className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                    <Users className="w-4 h-4 mr-2" />
-                    Export List
-                  </button>
-                </div>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-8 text-center">
-                <Users className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No students yet</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Students will appear here once they join using the group code: <strong>{group.groupCode}</strong>
-                </p>
-                <button
-                  onClick={() => copyGroupCode(group.groupCode)}
-                  className="mt-4 inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-100 hover:bg-blue-200"
-                >
-                  <Copy className="w-4 h-4 mr-2" />
-                  Copy Group Code
-                </button>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'settings' && (
-            <div className="space-y-6">
-              <div>
-                <h4 className="text-md font-medium text-gray-900 mb-4">Group Settings</h4>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Group Code</label>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="text"
-                        value={group.groupCode}
-                        readOnly
-                        className="block w-32 border border-gray-300 rounded-md px-3 py-2 bg-gray-50"
-                      />
-                      <button
-                        onClick={() => copyGroupCode(group.groupCode)}
-                        className="p-2 text-gray-400 hover:text-blue-600"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-3">Join Permissions</label>
-                    <div className="space-y-2">
-                      <div className="flex items-center">
-                        <input
-                          type="radio"
-                          id="college-only-edit"
-                          name="joinPermissions"
-                          checked={settings.joinPermissions === 'college-only'}
-                          onChange={() => handleSettingsUpdate({...settings, joinPermissions: 'college-only'})}
-                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                        />
-                        <label htmlFor="college-only-edit" className="ml-3 text-sm text-gray-700 flex items-center">
-                          <Shield className="w-4 h-4 mr-2 text-blue-600" />
-                          College Only - Location verification required
-                        </label>
-                      </div>
-                      <div className="flex items-center">
-                        <input
-                          type="radio"
-                          id="anywhere-edit"
-                          name="joinPermissions"
-                          checked={settings.joinPermissions === 'anywhere'}
-                          onChange={() => handleSettingsUpdate({...settings, joinPermissions: 'anywhere'})}
-                          className="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                        />
-                        <label htmlFor="anywhere-edit" className="ml-3 text-sm text-gray-700 flex items-center">
-                          <Globe className="w-4 h-4 mr-2 text-green-600" />
-                          Anywhere - No location restrictions
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="allowBroadcast-edit"
-                        checked={settings.allowBroadcast}
-                        onChange={(e) => handleSettingsUpdate({...settings, allowBroadcast: e.target.checked})}
-                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <label htmlFor="allowBroadcast-edit" className="ml-2 text-sm text-gray-700">
-                        Enable broadcast messaging
-                      </label>
-                    </div>
-
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="autoApprove-edit"
-                        checked={settings.autoApprove}
-                        onChange={(e) => handleSettingsUpdate({...settings, autoApprove: e.target.checked})}
-                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <label htmlFor="autoApprove-edit" className="ml-2 text-sm text-gray-700">
-                        Auto-approve join requests
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t">
-                <h5 className="text-sm font-medium text-gray-900 mb-2">Danger Zone</h5>
-                <button className="inline-flex items-center px-3 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-red-50 hover:bg-red-100">
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Group
-                </button>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'broadcast' && (
-            <div>
-              <div className="mb-4">
-                <h4 className="text-md font-medium text-gray-900">Broadcast Message</h4>
-                <p className="text-sm text-gray-500 mt-1">Send announcements to all students in {group.name}</p>
-              </div>
-
-              {settings.allowBroadcast ? (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Message Type</label>
-                    <select 
-                      value={broadcastMessage.type}
-                      onChange={(e) => setBroadcastMessage(prev => ({...prev, type: e.target.value}))}
-                      className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option>General Announcement</option>
-                      <option>Class Schedule Change</option>
-                      <option>Assignment Reminder</option>
-                      <option>Exam Notice</option>
-                      <option>Holiday Notice</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
-                    <input
-                      type="text"
-                      value={broadcastMessage.subject}
-                      onChange={(e) => setBroadcastMessage(prev => ({...prev, subject: e.target.value}))}
-                      placeholder="Message subject..."
-                      className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
-                    <textarea
-                      rows={4}
-                      value={broadcastMessage.message}
-                      onChange={(e) => setBroadcastMessage(prev => ({...prev, message: e.target.value}))}
-                      placeholder="Type your message here..."
-                      className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div className="flex items-center space-x-3">
-                    <button 
-                      onClick={handleSendBroadcast}
-                      disabled={!broadcastMessage.subject.trim() || !broadcastMessage.message.trim()}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      Send to All Students
-                    </button>
-                    <span className="text-sm text-gray-500">Will be sent to {group.totalStudents} students</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-gray-50 rounded-lg p-6 text-center">
-                  <MessageSquare className="mx-auto h-8 w-8 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">Broadcasting Disabled</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Enable broadcast messaging in group settings to send announcements.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setActiveTab('settings');
-                      handleSettingsUpdate({...settings, allowBroadcast: true});
-                    }}
-                    className="mt-3 inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-blue-100 hover:bg-blue-200"
-                  >
-                    Enable Broadcasting
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-end space-x-3 px-6 py-4 border-t bg-gray-50">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+          </div>
+          <button 
+            onClick={onLogout}
+            className="w-full flex items-center gap-3 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm"
           >
-            Close
-          </button>
-          <button
-            onClick={() => {
-              const updatedGroup = { ...group, classes, settings };
-              onGroupUpdated(updatedGroup);
-            }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Save Changes
+            <LogOut className="w-4 h-4" />
+            Logout
           </button>
         </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-h-screen">
+        {/* Top Header */}
+        <header className="bg-white shadow-sm border-b px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">
+                {activeTab === 'dashboard' && 'Dashboard'}
+                {activeTab === 'classes' && 'Classes'}
+                {activeTab === 'lecture-live' && 'Live Lecture'}
+                {activeTab === 'lectures' && 'Lectures'}
+                {activeTab === 'attendance' && 'Attendance'}
+                {activeTab === 'reports' && 'Reports'}
+                {activeTab === 'settings' && 'Settings'}
+              </h1>
+              <p className="text-sm text-gray-600">Welcome back, {user.name?.split(' ')[0]}!</p>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              {activeLecture && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  Lecture Live • {attendanceCount} students
+                </div>
+              )}
+              
+              <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">
+                <Bell className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Messages */}
+        {(error || success) && (
+          <div className="px-6 py-2">
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+                <AlertCircle className="w-5 h-5" />
+                <span className="text-sm">{error}</span>
+                <button 
+                  onClick={() => setError('')}
+                  className="ml-auto p-1 hover:bg-red-100 rounded"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+            {success && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center gap-2">
+                <CheckCircle className="w-5 h-5" />
+                <span className="text-sm">{success}</span>
+                <button 
+                  onClick={() => setSuccess('')}
+                  className="ml-auto p-1 hover:bg-green-100 rounded"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Main Content Area */}
+        <main className="flex-1 p-6">
+          {renderActiveView()}
+        </main>
       </div>
     </div>
   );
 };
 
-export default TeachersDashboard;
+export default TeacherDashboard;
