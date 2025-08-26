@@ -1,144 +1,215 @@
 import React from 'react';
-import { BookOpen, Users, GraduationCap, Play, TrendingUp, Calendar } from 'lucide-react';
+import { 
+  BookOpen, 
+  Users, 
+  GraduationCap, 
+  Play, 
+  Calendar,
+  TrendingUp,
+  Clock,
+  Award,
+  ArrowUpRight,
+  Sparkles,
+  Target,
+  Zap
+} from 'lucide-react';
 
 const DashboardOverview = ({ classes, onNavigateToClasses, user }) => {
-  // Calculate stats
-  const totalClasses = classes?.length || 0;
-  const totalSubjects = classes?.reduce((sum, cls) => sum + (cls.subjects?.length || 0), 0) || 0;
-  const totalLectures = classes?.reduce((sum, cls) => 
-    sum + (cls.subjects?.reduce((subSum, subject) => 
-      subSum + (subject.lectures?.length || 0), 0) || 0), 0) || 0;
-
   const stats = [
     {
       name: 'Classes',
-      value: totalClasses,
+      value: classes?.length || 0,
       icon: BookOpen,
-      color: 'bg-blue-500',
+      gradient: 'from-blue-500 to-cyan-500',
+      bgGradient: 'from-blue-50 to-cyan-50',
+      change: '+12%',
       onClick: () => onNavigateToClasses()
     },
     {
-      name: 'Subjects',
-      value: totalSubjects,
+      name: 'Total Students',
+      value: '156',
       icon: Users,
-      color: 'bg-green-500',
-      onClick: () => onNavigateToClasses()
+      gradient: 'from-emerald-500 to-teal-500',
+      bgGradient: 'from-emerald-50 to-teal-50',
+      change: '+8%'
     },
     {
       name: 'Lectures',
-      value: totalLectures,
+      value: '24',
       icon: GraduationCap,
-      color: 'bg-purple-500',
-      onClick: () => onNavigateToClasses()
+      gradient: 'from-purple-500 to-pink-500',
+      bgGradient: 'from-purple-50 to-pink-50',
+      change: '+15%'
     },
     {
       name: 'Active Sessions',
-      value: 0, // TODO: Get from active sessions
+      value: '3',
       icon: Play,
-      color: 'bg-orange-500',
-      onClick: () => onNavigateToClasses()
+      gradient: 'from-orange-500 to-red-500',
+      bgGradient: 'from-orange-50 to-red-50',
+      change: '+2%'
     }
   ];
 
   const recentActivity = [
-    { type: 'class', message: 'Created new class "Physics 101"', time: '2 hours ago' },
-    { type: 'lecture', message: 'Added lecture "Quantum Mechanics"', time: '1 day ago' },
-    { type: 'session', message: 'Completed session for "Mathematics"', time: '2 days ago' },
+    { action: 'Created new class', subject: 'Mathematics 101', time: '2 hours ago', icon: BookOpen, color: 'blue' },
+    { action: 'Started session', subject: 'Physics Lab', time: '4 hours ago', icon: Play, color: 'green' },
+    { action: 'Added lecture', subject: 'Chemistry Basics', time: '1 day ago', icon: GraduationCap, color: 'purple' },
+    { action: 'Updated attendance', subject: 'Biology Class', time: '2 days ago', icon: Users, color: 'orange' }
+  ];
+
+  const quickActions = [
+    {
+      title: 'Create New Class',
+      description: 'Set up a new class with subjects',
+      icon: BookOpen,
+      gradient: 'from-blue-500 to-purple-600',
+      bgGradient: 'from-blue-50 to-purple-50',
+      onClick: () => onNavigateToClasses()
+    },
+    {
+      title: 'Add Lecture',
+      description: 'Create engaging lecture content',
+      icon: GraduationCap,
+      gradient: 'from-emerald-500 to-cyan-500',
+      bgGradient: 'from-emerald-50 to-cyan-50',
+      onClick: () => onNavigateToClasses()
+    },
+    {
+      title: 'Start Session',
+      description: 'Begin live attendance tracking',
+      icon: Play,
+      gradient: 'from-orange-500 to-pink-500',
+      bgGradient: 'from-orange-50 to-pink-50',
+      onClick: () => onNavigateToClasses()
+    }
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
-        <h1 className="text-2xl font-bold mb-2">Welcome back, {user?.name || 'Teacher'}!</h1>
-        <p className="text-blue-100">Ready to manage your classes and track attendance?</p>
+    <div className="space-y-8">
+      {/* Premium Welcome Section */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 rounded-3xl p-8 text-white shadow-2xl">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24"></div>
+        <div className="relative z-10">
+          <div className="flex items-center mb-4">
+            <Sparkles className="w-8 h-8 mr-3 text-yellow-300" />
+            <h1 className="text-3xl font-bold">
+              Welcome back, {user?.name || 'Teacher'}!
+            </h1>
+          </div>
+          <p className="text-blue-100 text-lg mb-6 max-w-2xl">
+            Ready to inspire minds today? Your educational journey continues with powerful tools and insights.
+          </p>
+          <div className="flex items-center text-sm text-blue-200">
+            <Target className="w-4 h-4 mr-2" />
+            <span>Today's goal: Engage and educate with excellence</span>
+          </div>
+        </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Premium Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat) => (
           <div
             key={stat.name}
             onClick={stat.onClick}
-            className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
+            className={`group relative overflow-hidden bg-gradient-to-br ${stat.bgGradient} rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-white/50 ${
+              stat.onClick ? 'cursor-pointer hover:scale-105' : ''
+            }`}
           >
-            <div className="flex items-center">
-              <div className={`${stat.color} rounded-lg p-3`}>
+            <div className="flex items-start justify-between mb-4">
+              <div className={`p-3 rounded-2xl bg-gradient-to-br ${stat.gradient} shadow-lg`}>
                 <stat.icon className="w-6 h-6 text-white" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">{stat.name}</p>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+              <div className="flex items-center text-sm font-semibold text-green-600">
+                <TrendingUp className="w-4 h-4 mr-1" />
+                {stat.change}
               </div>
             </div>
+            <div>
+              <p className="text-sm font-medium text-gray-600 mb-1">{stat.name}</p>
+              <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+            </div>
+            {stat.onClick && (
+              <ArrowUpRight className="absolute top-4 right-4 w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+            )}
           </div>
         ))}
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <button
-            onClick={() => onNavigateToClasses()}
-            className="flex items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-          >
-            <BookOpen className="w-5 h-5 text-blue-600 mr-3" />
-            <span className="font-medium text-blue-900">Create New Class</span>
-          </button>
-          <button
-            onClick={() => onNavigateToClasses()}
-            className="flex items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
-          >
-            <GraduationCap className="w-5 h-5 text-green-600 mr-3" />
-            <span className="font-medium text-green-900">Add Lecture</span>
-          </button>
-          <button
-            onClick={() => onNavigateToClasses()}
-            className="flex items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
-          >
-            <Play className="w-5 h-5 text-purple-600 mr-3" />
-            <span className="font-medium text-purple-900">Start Session</span>
-          </button>
+      {/* Premium Quick Actions */}
+      <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-white/20">
+        <div className="flex items-center mb-6">
+          <Zap className="w-6 h-6 text-yellow-500 mr-3" />
+          <h2 className="text-2xl font-bold text-gray-900">Quick Actions</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {quickActions.map((action, index) => (
+            <button
+              key={index}
+              onClick={action.onClick}
+              className={`group relative overflow-hidden bg-gradient-to-br ${action.bgGradient} rounded-2xl p-6 hover:shadow-2xl transition-all duration-300 border border-white/50 hover:scale-105`}
+            >
+              <div className="flex items-start mb-4">
+                <div className={`p-3 rounded-2xl bg-gradient-to-br ${action.gradient} shadow-lg group-hover:scale-110 transition-transform`}>
+                  <action.icon className="w-6 h-6 text-white" />
+                </div>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">{action.title}</h3>
+              <p className="text-sm text-gray-600">{action.description}</p>
+              <ArrowUpRight className="absolute top-4 right-4 w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Recent Activity */}
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
-        {recentActivity.length > 0 ? (
-          <div className="space-y-3">
-            {recentActivity.map((activity, index) => (
-              <div key={index} className="flex items-center p-3 bg-gray-50 rounded-lg">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
-                <div className="flex-1">
-                  <p className="text-sm text-gray-900">{activity.message}</p>
-                  <p className="text-xs text-gray-500">{activity.time}</p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Premium Recent Activity */}
+        <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-white/20">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Activity</h2>
+          {recentActivity.length > 0 ? (
+            <div className="space-y-4">
+              {recentActivity.map((activity, index) => (
+                <div key={index} className="group flex items-center p-4 bg-white/50 rounded-2xl hover:bg-white/80 transition-all duration-200 border border-white/30">
+                  <div className={`p-3 rounded-2xl bg-gradient-to-br from-${activity.color}-500 to-${activity.color}-600 shadow-lg mr-4`}>
+                    <activity.icon className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-900 mb-1">
+                      {activity.action}
+                    </p>
+                    <p className="text-sm text-gray-600">{activity.subject}</p>
+                  </div>
+                  <span className="text-xs text-gray-500 font-medium">{activity.time}</span>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <p>No recent activity</p>
-            <p className="text-sm">Start by creating a class or adding lectures</p>
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-gray-500">
+              <Clock className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+              <p className="text-lg font-medium">No recent activity</p>
+            </div>
+          )}
+        </div>
 
-      {/* Today's Schedule (placeholder) */}
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Today's Schedule</h2>
-        <div className="text-center py-8 text-gray-500">
-          <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-          <p>No sessions scheduled for today</p>
-          <button
-            onClick={() => onNavigateToClasses()}
-            className="mt-2 text-blue-600 hover:text-blue-800 text-sm font-medium"
-          >
-            Schedule a session
-          </button>
+        {/* Premium Today's Schedule */}
+        <div className="bg-white/70 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-white/20">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Today's Schedule</h2>
+          <div className="text-center py-12 text-gray-500">
+            <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center">
+              <Calendar className="w-10 h-10 text-gray-400" />
+            </div>
+            <p className="text-lg font-medium mb-4">No sessions scheduled for today</p>
+            <button
+              onClick={() => onNavigateToClasses()}
+              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-2xl hover:shadow-lg transition-all duration-200 hover:scale-105"
+            >
+              <Calendar className="w-4 h-4 mr-2" />
+              Schedule a session
+            </button>
+          </div>
         </div>
       </div>
     </div>
