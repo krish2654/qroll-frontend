@@ -1,7 +1,7 @@
 import React from 'react';
 import { BookOpen, Users, GraduationCap, Play, TrendingUp, Calendar } from 'lucide-react';
 
-const DashboardOverview = ({ classes, onNavigate }) => {
+const DashboardOverview = ({ classes, onNavigateToClasses, user }) => {
   // Calculate stats
   const totalClasses = classes?.length || 0;
   const totalSubjects = classes?.reduce((sum, cls) => sum + (cls.subjects?.length || 0), 0) || 0;
@@ -15,28 +15,28 @@ const DashboardOverview = ({ classes, onNavigate }) => {
       value: totalClasses,
       icon: BookOpen,
       color: 'bg-blue-500',
-      onClick: () => onNavigate('classes')
+      onClick: () => onNavigateToClasses()
     },
     {
       name: 'Subjects',
       value: totalSubjects,
       icon: Users,
       color: 'bg-green-500',
-      onClick: () => onNavigate('subjects')
+      onClick: () => onNavigateToClasses()
     },
     {
       name: 'Lectures',
       value: totalLectures,
       icon: GraduationCap,
       color: 'bg-purple-500',
-      onClick: () => onNavigate('lectures')
+      onClick: () => onNavigateToClasses()
     },
     {
       name: 'Active Sessions',
       value: 0, // TODO: Get from active sessions
       icon: Play,
       color: 'bg-orange-500',
-      onClick: () => onNavigate('sessions')
+      onClick: () => onNavigateToClasses()
     }
   ];
 
@@ -50,7 +50,7 @@ const DashboardOverview = ({ classes, onNavigate }) => {
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-6 text-white">
-        <h1 className="text-2xl font-bold mb-2">Welcome back, Teacher!</h1>
+        <h1 className="text-2xl font-bold mb-2">Welcome back, {user?.name || 'Teacher'}!</h1>
         <p className="text-blue-100">Ready to manage your classes and track attendance?</p>
       </div>
 
@@ -80,21 +80,21 @@ const DashboardOverview = ({ classes, onNavigate }) => {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <button
-            onClick={() => onNavigate('classes')}
+            onClick={() => onNavigateToClasses()}
             className="flex items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
           >
             <BookOpen className="w-5 h-5 text-blue-600 mr-3" />
             <span className="font-medium text-blue-900">Create New Class</span>
           </button>
           <button
-            onClick={() => onNavigate('lectures')}
+            onClick={() => onNavigateToClasses()}
             className="flex items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
           >
             <GraduationCap className="w-5 h-5 text-green-600 mr-3" />
             <span className="font-medium text-green-900">Add Lecture</span>
           </button>
           <button
-            onClick={() => onNavigate('sessions')}
+            onClick={() => onNavigateToClasses()}
             className="flex items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
           >
             <Play className="w-5 h-5 text-purple-600 mr-3" />
@@ -134,7 +134,7 @@ const DashboardOverview = ({ classes, onNavigate }) => {
           <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
           <p>No sessions scheduled for today</p>
           <button
-            onClick={() => onNavigate('sessions')}
+            onClick={() => onNavigateToClasses()}
             className="mt-2 text-blue-600 hover:text-blue-800 text-sm font-medium"
           >
             Schedule a session
