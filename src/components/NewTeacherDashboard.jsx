@@ -507,7 +507,7 @@ const NewTeacherDashboard = () => {
           </div>
 
           {/* Navigation */}
-          <nav className="mt-2 px-3 flex-1 overflow-y-auto">
+          <nav className="mt-0 px-3 flex-1 overflow-y-auto">
             <div className="space-y-1">
               {navigation.map((item) => {
                 const isActive = currentPage === item.id;
