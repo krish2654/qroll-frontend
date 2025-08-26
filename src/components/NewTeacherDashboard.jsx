@@ -491,7 +491,7 @@ const NewTeacherDashboard = () => {
       }`}>
         <div className="h-full flex flex-col">
           {/* Logo */}
-          <div className="flex items-center justify-between h-14 px-5 border-b border-gray-200 flex-shrink-0">
+          <div className="flex items-center justify-between h-12 px-5 border-b border-gray-200 flex-shrink-0">
             <div className="flex items-center">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <GraduationCap className="w-5 h-5 text-white" />
@@ -507,7 +507,7 @@ const NewTeacherDashboard = () => {
           </div>
 
           {/* Navigation */}
-          <nav className="mt-6 px-3 flex-1 overflow-y-auto">
+          <nav className="mt-2 px-3 flex-1 overflow-y-auto">
             <div className="space-y-1">
               {navigation.map((item) => {
                 const isActive = currentPage === item.id;
@@ -559,7 +559,7 @@ const NewTeacherDashboard = () => {
       <div className="lg:pl-64">
         {/* Top bar */}
         <div className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
-          <div className="flex items-center justify-between h-14 px-4 sm:px-5">
+          <div className="flex items-center justify-between h-12 px-4 sm:px-5">
             <div className="flex items-center">
               <button
                 onClick={() => setSidebarOpen(true)}
