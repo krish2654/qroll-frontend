@@ -3,7 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { UserCheck, GraduationCap, Users, LogOut, Loader } from 'lucide-react';
 import { authAPI, authStorage } from './services/api';
 import { AuthProvider } from './contexts/AuthContext';
-import NewTeacherDashboard from './components/NewTeacherDashboard';
+import TeacherDashboard from './components/TeacherDashboard';
+import StudentDashboard from './components/StudentDashboard';
 
 const loadGoogleScript = () => {
   return new Promise((resolve) => {
@@ -174,50 +175,10 @@ function App() {
     }
     
     if (user.role === 'student') {
-      // Student dashboard will be implemented next
       return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md text-center">
-            <div className="mb-6">
-              <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-4 border-4 border-green-100">
-                <img 
-                  src={user.profilePicture} 
-                  alt={user.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=3b82f6&color=fff`;
-                  }}
-                />
-              </div>
-              <h1 className="text-2xl font-bold text-gray-800">Student Dashboard</h1>
-              <p className="text-gray-600 mt-2">🚧 Coming Soon!</p>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <p className="text-sm text-gray-600">Logged in as:</p>
-              <p className="font-semibold text-gray-800">{user.name}</p>
-              <p className="text-sm text-gray-600">{user.email}</p>
-              <div className="flex items-center justify-center gap-2 mt-2">
-                <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">
-                  👨‍🎓 Student
-                </span>
-              </div>
-            </div>
-
-            <button 
-              onClick={handleLogout}
-              disabled={authLoading}
-              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              {authLoading ? (
-                <Loader className="w-4 h-4 animate-spin" />
-              ) : (
-                <LogOut className="w-4 h-4" />
-              )}
-              Logout
-            </button>
-          </div>
-        </div>
+        <AuthProvider>
+          <StudentDashboard user={user} onLogout={handleLogout} />
+        </AuthProvider>
       );
     }
   }
