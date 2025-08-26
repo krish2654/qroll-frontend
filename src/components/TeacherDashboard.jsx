@@ -3,8 +3,9 @@ import { Plus, Play, X, Loader, MapPin, Clock, Download, Users, RefreshCw } from
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../services/api';
 
-const TeacherDashboard = () => {
-  const { user } = useAuth();
+const TeacherDashboard = ({ user: propUser, onLogout }) => {
+  const { user: ctxUser } = useAuth();
+  const effectiveUser = propUser || ctxUser;
   
   // State management
   const [classes, setClasses] = useState([]);
@@ -35,10 +36,10 @@ const TeacherDashboard = () => {
   const tokenRefreshInterval = useRef(null);
 
   useEffect(() => {
-    if (user && user.role === 'teacher') {
+    if (effectiveUser && effectiveUser.role === 'teacher') {
       fetchClasses();
     }
-  }, [user]);
+  }, [effectiveUser]);
 
   const getAuthHeaders = () => {
     const token = localStorage.getItem('qroll_token');
@@ -520,7 +521,7 @@ const TeacherDashboard = () => {
               ))}
             </div>
 
-            {selectedClass.subjects?.length === 0 && (
+            {(!selectedClass.subjects || selectedClass.subjects.length === 0) && (
               <div className="text-center py-6 text-gray-500">
                 <p>No subjects yet. Add a subject to start lectures!</p>
               </div>
