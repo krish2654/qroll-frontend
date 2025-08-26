@@ -31,7 +31,9 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
   
   // UI states
   const [showAddLecture, setShowAddLecture] = useState(false);
+  const [showLectureManager, setShowLectureManager] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState(null);
+  const [selectedLecture, setSelectedLecture] = useState(null);
   
   // Session creation states
   const [sessionSubject, setSessionSubject] = useState('');
@@ -566,20 +568,29 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
                       <button
                         onClick={() => {
                           setSelectedSubject(subject);
-                          setShowAddLecture(true);
+                          setShowLectureManager(true);
                         }}
                         className="px-2 py-1 bg-green-600 text-white rounded text-xs flex items-center gap-1"
                       >
                         <Plus className="w-3 h-3" />
-                        Lecture
+                        Lectures
                       </button>
                       <button
                         onClick={() => {
-                          setSessionSubject(subject.code);
-                          setShowCreateSession(true);
+                          if (subject.lectures && subject.lectures.length > 0) {
+                            setSelectedSubject(subject);
+                            setSessionSubject(subject.code);
+                            setShowCreateSession(true);
+                          } else {
+                            showMessage('Create lectures first to start sessions', 'error');
+                          }
                         }}
                         disabled={loading}
-                        className="px-2 py-1 bg-blue-600 text-white rounded text-xs flex items-center gap-1"
+                        className={`px-2 py-1 rounded text-xs flex items-center gap-1 ${
+                          subject.lectures && subject.lectures.length > 0
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-300 text-gray-500'
+                        }`}
                       >
                         <Play className="w-3 h-3" />
                         Session
@@ -598,6 +609,80 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
           </div>
         )}
 
+        {/* Lecture Manager Modal */}
+        {showLectureManager && selectedSubject && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-gray-900">Manage Lectures</h3>
+                <button onClick={() => {
+                  setShowLectureManager(false);
+                  setSelectedSubject(null);
+                  setShowAddLecture(false);
+                  setLectureName('');
+                  setLectureDescription('');
+                  setLectureDuration(60);
+                }}>
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm font-medium text-blue-900">{selectedSubject.name}</p>
+                <p className="text-xs text-blue-600">{selectedSubject.code}</p>
+              </div>
+
+              {/* Add New Lecture Button */}
+              <button
+                onClick={() => setShowAddLecture(true)}
+                className="w-full mb-4 p-3 bg-green-600 text-white rounded-lg flex items-center justify-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Add New Lecture
+              </button>
+
+              {/* Lectures List */}
+              <div className="space-y-3">
+                {selectedSubject.lectures && selectedSubject.lectures.length > 0 ? (
+                  selectedSubject.lectures.map((lecture, index) => (
+                    <div key={index} className="p-3 bg-gray-50 rounded-lg border">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900">{lecture.title}</h4>
+                          {lecture.description && (
+                            <p className="text-sm text-gray-600 mt-1">{lecture.description}</p>
+                          )}
+                          <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                            <span>Duration: {lecture.duration || 60} min</span>
+                            {lecture.date && (
+                              <span>Date: {new Date(lecture.date).toLocaleDateString()}</span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setSelectedLecture(lecture);
+                            setSessionSubject(selectedSubject.code);
+                            setShowCreateSession(true);
+                          }}
+                          className="ml-2 px-2 py-1 bg-blue-600 text-white rounded text-xs flex items-center gap-1"
+                        >
+                          <Play className="w-3 h-3" />
+                          Start
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-6 text-gray-500">
+                    <p>No lectures yet. Create your first lecture!</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Add Lecture Modal */}
         {showAddLecture && selectedSubject && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -606,7 +691,6 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
                 <h3 className="font-bold text-gray-900">Add Lecture</h3>
                 <button onClick={() => {
                   setShowAddLecture(false);
-                  setSelectedSubject(null);
                   setLectureName('');
                   setLectureDescription('');
                   setLectureDuration(60);
@@ -769,23 +853,45 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
                 </button>
               </div>
               <div className="space-y-4">
-                {/* Subject Selection */}
+                {/* Subject and Lecture Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Subject / Course
+                    Select Lecture
                   </label>
-                  <select
-                    value={sessionSubject}
-                    onChange={(e) => setSessionSubject(e.target.value)}
-                    className="w-full p-3 border rounded-lg"
-                  >
-                    <option value="">Select Subject</option>
-                    {selectedClass.subjects?.map((subject, index) => (
-                      <option key={index} value={subject.code}>
-                        {subject.name} ({subject.code})
-                      </option>
-                    ))}
-                  </select>
+                  {selectedSubject && selectedSubject.lectures && selectedSubject.lectures.length > 0 ? (
+                    <select
+                      value={selectedLecture ? selectedSubject.lectures.indexOf(selectedLecture) : ''}
+                      onChange={(e) => {
+                        const lectureIndex = parseInt(e.target.value);
+                        setSelectedLecture(selectedSubject.lectures[lectureIndex]);
+                        setSessionDuration(selectedSubject.lectures[lectureIndex]?.duration || 60);
+                      }}
+                      className="w-full p-3 border rounded-lg"
+                    >
+                      <option value="">Choose a lecture to start session</option>
+                      {selectedSubject.lectures.map((lecture, index) => (
+                        <option key={index} value={index}>
+                          {lecture.title} ({lecture.duration || 60} min)
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm text-yellow-800">
+                        No lectures available. Create lectures first in the subject.
+                      </p>
+                    </div>
+                  )}
+                  
+                  {selectedLecture && (
+                    <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                      <h4 className="font-medium text-blue-900">{selectedLecture.title}</h4>
+                      <p className="text-sm text-blue-700">{selectedSubject.name} ({selectedSubject.code})</p>
+                      {selectedLecture.description && (
+                        <p className="text-xs text-blue-600 mt-1">{selectedLecture.description}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Location Settings */}
@@ -892,11 +998,11 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
 
                 <button
                   onClick={createSession}
-                  disabled={loading || !sessionSubject}
+                  disabled={loading || !selectedLecture}
                   className="w-full p-3 bg-purple-600 text-white rounded-lg flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {loading ? <Loader className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                  Create Session
+                  Start Session
                 </button>
               </div>
             </div>
