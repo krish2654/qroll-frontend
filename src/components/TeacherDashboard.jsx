@@ -21,11 +21,17 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
   
   // Form states
   const [className, setClassName] = useState('');
-  const [section, setSection] = useState('');
+  const [classDescription, setClassDescription] = useState('');
   const [subjectName, setSubjectName] = useState('');
   const [subjectCode, setSubjectCode] = useState('');
-  // Toggle to add first subject while creating a class
-  const [addFirstSubjectNow, setAddFirstSubjectNow] = useState(false);
+  const [subjectDescription, setSubjectDescription] = useState('');
+  const [lectureName, setLectureName] = useState('');
+  const [lectureDescription, setLectureDescription] = useState('');
+  const [lectureDuration, setLectureDuration] = useState(60);
+  
+  // UI states
+  const [showAddLecture, setShowAddLecture] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState(null);
   
   // Session creation states
   const [sessionSubject, setSessionSubject] = useState('');
@@ -71,19 +77,9 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
   };
 
   const createClass = async () => {
-    if (!className.trim() || !section.trim()) {
-      showMessage('Class name and section are required', 'error');
+    if (!className.trim()) {
+      showMessage('Class name is required', 'error');
       return;
-    }
-
-    // Build subjects array if user opted to add one now
-    const initialSubjects = [];
-    if (addFirstSubjectNow) {
-      if (!subjectName.trim() || !subjectCode.trim()) {
-        showMessage('Subject name and code are required', 'error');
-        return;
-      }
-      initialSubjects.push({ name: subjectName.trim(), code: subjectCode.trim() });
     }
 
     setLoading(true);
@@ -93,8 +89,7 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
         headers: getAuthHeaders(),
         body: JSON.stringify({
           name: className.trim(),
-          section: section.trim(),
-          subjects: initialSubjects
+          description: classDescription.trim() || undefined
         })
       });
       
@@ -103,10 +98,7 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
         await fetchClasses();
         setShowCreateClass(false);
         setClassName('');
-        setSection('');
-        setAddFirstSubjectNow(false);
-        setSubjectName('');
-        setSubjectCode('');
+        setClassDescription('');
         showMessage('Class created successfully!');
       } else {
         showMessage(data.message || 'Failed to create class', 'error');
@@ -120,36 +112,75 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
 
   const addSubject = async () => {
     if (!subjectName.trim() || !subjectCode.trim()) {
-      showMessage('Please enter subject name and code', 'error');
+      showMessage('Subject name and code are required', 'error');
       return;
     }
 
     setLoading(true);
     try {
-      const updatedSubjects = [...(selectedClass.subjects || []), {
-        name: subjectName.trim(),
-        code: subjectCode.trim()
-      }];
-
-      const response = await fetch(`${API_BASE_URL}/classes/${selectedClass._id}/update`, {
-        method: 'PUT',
+      const response = await fetch(`${API_BASE_URL}/classes/${selectedClass._id}/subjects`, {
+        method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ subjects: updatedSubjects })
+        body: JSON.stringify({
+          name: subjectName.trim(),
+          code: subjectCode.trim(),
+          description: subjectDescription.trim() || undefined
+        })
       });
       
       const data = await response.json();
       if (data.success) {
         await fetchClasses();
-        setSelectedClass({...selectedClass, subjects: updatedSubjects});
+        setSelectedClass(data.class);
         setShowAddSubject(false);
         setSubjectName('');
         setSubjectCode('');
+        setSubjectDescription('');
         showMessage('Subject added successfully!');
       } else {
         showMessage(data.message || 'Failed to add subject', 'error');
       }
     } catch (error) {
       showMessage('Failed to add subject', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Add lecture to subject
+  const addLecture = async () => {
+    if (!lectureName.trim()) {
+      showMessage('Lecture title is required', 'error');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/classes/${selectedClass._id}/subjects/${selectedSubject.code}/lectures`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          title: lectureName.trim(),
+          description: lectureDescription.trim() || undefined,
+          duration: lectureDuration
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        await fetchClasses();
+        setSelectedClass(data.class);
+        setShowAddLecture(false);
+        setLectureName('');
+        setLectureDescription('');
+        setLectureDuration(60);
+        setSelectedSubject(null);
+        showMessage('Lecture added successfully!');
+      } else {
+        showMessage(data.message || 'Failed to add lecture', 'error');
+      }
+    } catch (error) {
+      showMessage('Failed to add lecture', 'error');
     } finally {
       setLoading(false);
     }
@@ -490,7 +521,12 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
             {/* Class Info */}
             <div className="p-4 bg-white rounded-lg shadow">
               <h2 className="font-bold text-gray-900">{selectedClass.name}</h2>
-              <p className="text-gray-600">Section {selectedClass.section}</p>
+              {selectedClass.description && (
+                <p className="text-gray-600 mt-1">{selectedClass.description}</p>
+              )}
+              <p className="text-xs text-blue-600 mt-2">
+                {selectedClass.subjects?.length || 0} subjects
+              </p>
             </div>
 
             {/* Action Buttons */}
@@ -515,22 +551,40 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
             <div className="space-y-2">
               {selectedClass.subjects?.map((subject, index) => (
                 <div key={index} className="p-3 bg-white rounded-lg shadow border">
-                  <div className="flex justify-between items-center">
-                    <div>
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
                       <h4 className="font-medium text-gray-900">{subject.name}</h4>
                       <p className="text-sm text-gray-600">{subject.code}</p>
+                      {subject.description && (
+                        <p className="text-xs text-gray-500 mt-1">{subject.description}</p>
+                      )}
+                      <p className="text-xs text-blue-600 mt-1">
+                        {subject.lectures?.length || 0} lectures
+                      </p>
                     </div>
-                    <button
-                      onClick={() => {
-                        setSessionSubject(subject.code);
-                        setShowCreateSession(true);
-                      }}
-                      disabled={loading}
-                      className="px-3 py-1 bg-blue-600 text-white rounded text-sm flex items-center gap-1"
-                    >
-                      <Play className="w-3 h-3" />
-                      Session
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setSelectedSubject(subject);
+                          setShowAddLecture(true);
+                        }}
+                        className="px-2 py-1 bg-green-600 text-white rounded text-xs flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" />
+                        Lecture
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSessionSubject(subject.code);
+                          setShowCreateSession(true);
+                        }}
+                        disabled={loading}
+                        className="px-2 py-1 bg-blue-600 text-white rounded text-xs flex items-center gap-1"
+                      >
+                        <Play className="w-3 h-3" />
+                        Session
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -538,9 +592,86 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
 
             {(!selectedClass.subjects || selectedClass.subjects.length === 0) && (
               <div className="text-center py-6 text-gray-500">
-                <p>No subjects yet. Add a subject to start lectures!</p>
+                <p>No subjects yet. Add a subject to start!</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Add Lecture Modal */}
+        {showAddLecture && selectedSubject && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-sm">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-gray-900">Add Lecture</h3>
+                <button onClick={() => {
+                  setShowAddLecture(false);
+                  setSelectedSubject(null);
+                  setLectureName('');
+                  setLectureDescription('');
+                  setLectureDuration(60);
+                }}>
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="mb-3 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm font-medium text-blue-900">{selectedSubject.name}</p>
+                <p className="text-xs text-blue-600">{selectedSubject.code}</p>
+              </div>
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  placeholder="Lecture Title"
+                  value={lectureName}
+                  onChange={(e) => setLectureName(e.target.value)}
+                  className="w-full p-3 border rounded-lg"
+                />
+                <textarea
+                  placeholder="Description (optional)"
+                  value={lectureDescription}
+                  onChange={(e) => setLectureDescription(e.target.value)}
+                  className="w-full p-3 border rounded-lg resize-none"
+                  rows={2}
+                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Duration (minutes)
+                  </label>
+                  <div className="grid grid-cols-3 gap-2 mb-2">
+                    {[30, 60, 90].map((duration) => (
+                      <button
+                        key={duration}
+                        onClick={() => setLectureDuration(duration)}
+                        className={`p-2 rounded text-sm ${
+                          lectureDuration === duration
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-gray-700'
+                        }`}
+                      >
+                        {duration}min
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    type="number"
+                    min="15"
+                    max="180"
+                    value={lectureDuration}
+                    onChange={(e) => setLectureDuration(parseInt(e.target.value))}
+                    className="w-full p-2 border rounded text-sm"
+                    placeholder="Custom duration"
+                  />
+                </div>
+                <button
+                  onClick={addLecture}
+                  disabled={loading}
+                  className="w-full p-3 bg-green-600 text-white rounded-lg flex items-center justify-center gap-2"
+                >
+                  {loading ? <Loader className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  Add Lecture
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -562,48 +693,13 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
                   onChange={(e) => setClassName(e.target.value)}
                   className="w-full p-3 border rounded-lg"
                 />
-                <input
-                  type="text"
-                  placeholder="Section"
-                  value={section}
-                  onChange={(e) => setSection(e.target.value)}
-                  className="w-full p-3 border rounded-lg"
+                <textarea
+                  placeholder="Description (optional)"
+                  value={classDescription}
+                  onChange={(e) => setClassDescription(e.target.value)}
+                  className="w-full p-3 border rounded-lg resize-none"
+                  rows={3}
                 />
-
-                {/* Optional: Add first subject now */}
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={addFirstSubjectNow}
-                    onChange={(e) => setAddFirstSubjectNow(e.target.checked)}
-                  />
-                  <span>Add first subject now (optional)</span>
-                </label>
-
-                {addFirstSubjectNow && (
-                  <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">Subject Name</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Data Structures"
-                        value={subjectName}
-                        onChange={(e) => setSubjectName(e.target.value)}
-                        className="w-full p-3 border rounded-lg"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">Subject Code</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. CS201"
-                        value={subjectCode}
-                        onChange={(e) => setSubjectCode(e.target.value)}
-                        className="w-full p-3 border rounded-lg"
-                      />
-                    </div>
-                  </div>
-                )}
                 <button
                   onClick={createClass}
                   disabled={loading}
@@ -641,6 +737,13 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
                   value={subjectCode}
                   onChange={(e) => setSubjectCode(e.target.value)}
                   className="w-full p-3 border rounded-lg"
+                />
+                <textarea
+                  placeholder="Description (optional)"
+                  value={subjectDescription}
+                  onChange={(e) => setSubjectDescription(e.target.value)}
+                  className="w-full p-3 border rounded-lg resize-none"
+                  rows={2}
                 />
                 <button
                   onClick={addSubject}
