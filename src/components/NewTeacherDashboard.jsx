@@ -584,7 +584,7 @@ const NewTeacherDashboard = () => {
         </div>
 
         {/* Page content */}
-        <main className="p-3 sm:p-5">
+        <main className="p-3 sm:p-5 pt-0">
           <div className="max-w-7xl mx-auto">
             {renderContent()}
           </div>
