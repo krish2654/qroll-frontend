@@ -24,6 +24,8 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
   const [section, setSection] = useState('');
   const [subjectName, setSubjectName] = useState('');
   const [subjectCode, setSubjectCode] = useState('');
+  // Toggle to add first subject while creating a class
+  const [addFirstSubjectNow, setAddFirstSubjectNow] = useState(false);
   
   // Session creation states
   const [sessionSubject, setSessionSubject] = useState('');
@@ -70,8 +72,18 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
 
   const createClass = async () => {
     if (!className.trim() || !section.trim()) {
-      showMessage('Please enter class name and section', 'error');
+      showMessage('Class name and section are required', 'error');
       return;
+    }
+
+    // Build subjects array if user opted to add one now
+    const initialSubjects = [];
+    if (addFirstSubjectNow) {
+      if (!subjectName.trim() || !subjectCode.trim()) {
+        showMessage('Subject name and code are required', 'error');
+        return;
+      }
+      initialSubjects.push({ name: subjectName.trim(), code: subjectCode.trim() });
     }
 
     setLoading(true);
@@ -82,7 +94,7 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
         body: JSON.stringify({
           name: className.trim(),
           section: section.trim(),
-          subjects: []
+          subjects: initialSubjects
         })
       });
       
@@ -92,6 +104,9 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
         setShowCreateClass(false);
         setClassName('');
         setSection('');
+        setAddFirstSubjectNow(false);
+        setSubjectName('');
+        setSubjectCode('');
         showMessage('Class created successfully!');
       } else {
         showMessage(data.message || 'Failed to create class', 'error');
@@ -554,6 +569,41 @@ const TeacherDashboard = ({ user: propUser, onLogout }) => {
                   onChange={(e) => setSection(e.target.value)}
                   className="w-full p-3 border rounded-lg"
                 />
+
+                {/* Optional: Add first subject now */}
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={addFirstSubjectNow}
+                    onChange={(e) => setAddFirstSubjectNow(e.target.checked)}
+                  />
+                  <span>Add first subject now (optional)</span>
+                </label>
+
+                {addFirstSubjectNow && (
+                  <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Subject Name</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Data Structures"
+                        value={subjectName}
+                        onChange={(e) => setSubjectName(e.target.value)}
+                        className="w-full p-3 border rounded-lg"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Subject Code</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. CS201"
+                        value={subjectCode}
+                        onChange={(e) => setSubjectCode(e.target.value)}
+                        className="w-full p-3 border rounded-lg"
+                      />
+                    </div>
+                  </div>
+                )}
                 <button
                   onClick={createClass}
                   disabled={loading}
