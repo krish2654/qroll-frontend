@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { UserCheck, GraduationCap, Users, LogOut, Loader } from 'lucide-react';
 import { authAPI, authStorage } from './services/api';
 import { AuthProvider } from './contexts/AuthContext';
-import TeacherDashboard from './components/TeacherDashboard';
+import NewTeacherDashboard from './components/NewTeacherDashboard';
 
 const loadGoogleScript = () => {
   return new Promise((resolve) => {
@@ -168,7 +168,7 @@ function App() {
     if (user.role === 'teacher') {
       return (
         <AuthProvider>
-          <TeacherDashboard user={user} onLogout={handleLogout} />
+          <NewTeacherDashboard user={user} onLogout={handleLogout} />
         </AuthProvider>
       );
     }
