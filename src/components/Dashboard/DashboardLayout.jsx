@@ -13,15 +13,13 @@ import {
   ChevronDown
 } from 'lucide-react';
 
-const DashboardLayout = ({ children, currentPage, onPageChange, user, onLogout }) => {
+const DashboardLayout = ({ children, currentPage, onNavigate, user, onLogout }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
   const navigation = [
-    { name: 'Dashboard', icon: Home, page: 'dashboard' },
+    { name: 'Overview', icon: Home, page: 'overview' },
     { name: 'Classes', icon: BookOpen, page: 'classes' },
-    { name: 'Subjects', icon: Users, page: 'subjects' },
-    { name: 'Lectures', icon: GraduationCap, page: 'lectures' },
     { name: 'Sessions', icon: Play, page: 'sessions' },
     { name: 'Reports', icon: BarChart3, page: 'reports' },
   ];
@@ -63,7 +61,7 @@ const DashboardLayout = ({ children, currentPage, onPageChange, user, onLogout }
                 <button
                   key={item.name}
                   onClick={() => {
-                    onPageChange(item.page);
+                    onNavigate(item.page);
                     setSidebarOpen(false);
                   }}
                   className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
