@@ -506,7 +506,7 @@ const NewTeacherDashboard = () => {
         </div>
 
         {/* Navigation */}
-        <nav className="mt-6 px-3">
+        <nav className="mt-6 px-3 pb-28">
           <div className="space-y-1">
             {navigation.map((item) => {
               const isActive = currentPage === item.id;
@@ -533,15 +533,15 @@ const NewTeacherDashboard = () => {
 
         {/* User Profile */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
-          <div className="flex items-center">
+          <div className="flex items-center min-w-0">
             <img
               src={user?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&background=3b82f6&color=fff`}
               alt={user?.name}
               className="w-10 h-10 rounded-full"
             />
-            <div className="ml-3 flex-1">
-              <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-              <p className="text-xs text-gray-500">{user?.email}</p>
+            <div className="ml-3 flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">{user?.name}</p>
+              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
             </div>
             <button
               onClick={logout}
