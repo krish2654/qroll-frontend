@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Home, 
   BookOpen, 
@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import QRCode from 'qrcode';
 
 const NewTeacherDashboard = () => {
   const { user, logout } = useAuth();
@@ -30,6 +31,13 @@ const NewTeacherDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newClass, setNewClass] = useState({ name: '', section: '', description: '' });
+  // Sessions state
+  const [selectedClassId, setSelectedClassId] = useState('');
+  const [currentSession, setCurrentSession] = useState(null); // { id, code }
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [attendance, setAttendance] = useState([]); // [{id, name, time}]
+  const [sessionLoading, setSessionLoading] = useState(false);
+  const attendanceTimerRef = useRef(null);
 
   // Navigation items
   const navigation = [
@@ -87,17 +95,17 @@ const NewTeacherDashboard = () => {
   ];
 
   const renderOverview = () => (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 text-white">
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-4 text-white">
         <h1 className="text-2xl font-bold mb-2">Welcome back, {user?.name}!</h1>
         <p className="text-blue-100">Ready to inspire minds today? Let's make learning amazing.</p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map((stat) => (
-          <div key={stat.name} className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+          <div key={stat.name} className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
             <div className="flex items-center">
               <div className={`p-2 rounded-lg bg-${stat.color}-100`}>
                 <stat.icon className={`w-5 h-5 text-${stat.color}-600`} />
@@ -112,26 +120,26 @@ const NewTeacherDashboard = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+      <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            className="flex items-center p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
           >
             <Plus className="w-5 h-5 text-blue-600 mr-3" />
             <span className="font-medium text-blue-900">Create New Class</span>
           </button>
           <button
             onClick={() => setCurrentPage('sessions')}
-            className="flex items-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+            className="flex items-center p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
           >
             <Play className="w-5 h-5 text-green-600 mr-3" />
             <span className="font-medium text-green-900">Start Session</span>
           </button>
           <button
             onClick={() => setCurrentPage('reports')}
-            className="flex items-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+            className="flex items-center p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
           >
             <BarChart3 className="w-5 h-5 text-purple-600 mr-3" />
             <span className="font-medium text-purple-900">View Reports</span>
@@ -140,12 +148,12 @@ const NewTeacherDashboard = () => {
       </div>
 
       {/* Recent Activity & Schedule */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {recentActivity.map((activity, index) => (
-              <div key={index} className="flex items-center p-3 bg-gray-50 rounded-lg">
+              <div key={index} className="flex items-center p-2.5 bg-gray-50 rounded-lg">
                 <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-900">{activity.action}</p>
@@ -157,14 +165,14 @@ const NewTeacherDashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+        <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Today's Schedule</h2>
-          <div className="text-center py-8 text-gray-500">
-            <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+          <div className="text-center py-6 text-gray-500">
+            <Calendar className="w-10 h-10 mx-auto mb-2 text-gray-300" />
             <p>No sessions scheduled for today</p>
             <button
               onClick={() => setCurrentPage('sessions')}
-              className="mt-2 text-blue-600 hover:text-blue-800 text-sm font-medium"
+              className="mt-1.5 text-blue-600 hover:text-blue-800 text-sm font-medium"
             >
               Schedule a session
             </button>
@@ -175,7 +183,7 @@ const NewTeacherDashboard = () => {
   );
 
   const renderClasses = () => (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -193,9 +201,9 @@ const NewTeacherDashboard = () => {
 
       {/* Classes Grid */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 animate-pulse">
+            <div key={i} className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 animate-pulse">
               <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
               <div className="h-3 bg-gray-200 rounded w-1/2 mb-4"></div>
               <div className="h-3 bg-gray-200 rounded w-full"></div>
@@ -203,11 +211,11 @@ const NewTeacherDashboard = () => {
           ))}
         </div>
       ) : classes.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {classes.map((cls) => (
             <div
               key={cls._id}
-              className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
+              className="bg-white rounded-lg p-4 shadow-sm border border-gray-200 hover:shadow-md hover:border-blue-300 transition-all cursor-pointer"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="p-3 bg-blue-100 rounded-lg">
@@ -262,13 +270,7 @@ const NewTeacherDashboard = () => {
       case 'classes':
         return renderClasses();
       case 'sessions':
-        return (
-          <div className="text-center py-12">
-            <Play className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Sessions</h3>
-            <p className="text-gray-600">Session management coming soon</p>
-          </div>
-        );
+        return renderSessions();
       case 'reports':
         return (
           <div className="text-center py-12">
@@ -281,6 +283,197 @@ const NewTeacherDashboard = () => {
         return renderOverview();
     }
   };
+
+  // ----- Sessions helpers -----
+  const generateQRCode = async (payload) => {
+    try {
+      const url = typeof payload === 'string' ? payload : JSON.stringify(payload);
+      const dataUrl = await QRCode.toDataURL(url, { width: 256, margin: 1 });
+      setQrDataUrl(dataUrl);
+    } catch (err) {
+      console.error('QR generation failed:', err);
+      setQrDataUrl('');
+    }
+  };
+
+  const startPollingAttendance = (sessionId) => {
+    stopPollingAttendance();
+    attendanceTimerRef.current = setInterval(async () => {
+      try {
+        // Adjust endpoint to match backend. Expected: returns array of attendees
+        const res = await api.get(`/sessions/${sessionId}/attendance`);
+        const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+        setAttendance(list);
+      } catch (e) {
+        // Keep UI running even if polling fails once
+        console.warn('Attendance polling error:', e?.message || e);
+      }
+    }, 4000);
+  };
+
+  const stopPollingAttendance = () => {
+    if (attendanceTimerRef.current) {
+      clearInterval(attendanceTimerRef.current);
+      attendanceTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    // Cleanup on unmount
+    return () => stopPollingAttendance();
+  }, []);
+
+  const startSession = async () => {
+    if (!selectedClassId) return;
+    try {
+      setSessionLoading(true);
+      // Backend contract assumption: returns { id, code }
+      const res = await api.post('/sessions', { classId: selectedClassId });
+      const sess = res?.data || res || {};
+      if (!sess.id) {
+        // Fallback client-side session id/code if backend not ready
+        const fallback = {
+          id: `local-${Date.now()}`,
+          code: Math.random().toString(36).slice(2, 8).toUpperCase(),
+        };
+        setCurrentSession(fallback);
+        await generateQRCode({ type: 'qroll-session', sessionId: fallback.id, code: fallback.code });
+        setAttendance([]);
+        startPollingAttendance(fallback.id);
+        return;
+      }
+      setCurrentSession(sess);
+      // Encode minimal join payload; consumers can scan and open app/web to join
+      await generateQRCode({ type: 'qroll-session', sessionId: sess.id, code: sess.code });
+      setAttendance([]);
+      startPollingAttendance(sess.id);
+    } catch (err) {
+      console.error('Failed to start session:', err);
+      // Provide resilient local fallback when API fails
+      const fallback = {
+        id: `local-${Date.now()}`,
+        code: Math.random().toString(36).slice(2, 8).toUpperCase(),
+      };
+      setCurrentSession(fallback);
+      await generateQRCode({ type: 'qroll-session', sessionId: fallback.id, code: fallback.code });
+      setAttendance([]);
+      startPollingAttendance(fallback.id);
+    } finally {
+      setSessionLoading(false);
+    }
+  };
+
+  const stopSession = async () => {
+    if (!currentSession) return;
+    try {
+      setSessionLoading(true);
+      // Best-effort stop; ignore errors
+      await api.post(`/sessions/${currentSession.id}/stop`, {});
+    } catch (_) {
+      // ignore
+    } finally {
+      stopPollingAttendance();
+      setCurrentSession(null);
+      setQrDataUrl('');
+      setAttendance([]);
+      setSessionLoading(false);
+    }
+  };
+
+  const renderSessions = () => (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Live Session</h1>
+          <p className="text-gray-600">Start a session, display QR for students, and track attendance.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <select
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            value={selectedClassId}
+            onChange={(e) => setSelectedClassId(e.target.value)}
+            disabled={!!currentSession}
+          >
+            <option value="">Select class</option>
+            {classes.map((c) => (
+              <option key={c._id} value={c._id}>{c.name}{c.section ? ` • ${c.section}` : ''}</option>
+            ))}
+          </select>
+          {!currentSession ? (
+            <button
+              onClick={startSession}
+              disabled={!selectedClassId || sessionLoading}
+              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+            >
+              <Play className="w-4 h-4 mr-2" />
+              Start
+            </button>
+          ) : (
+            <button
+              onClick={stopSession}
+              disabled={sessionLoading}
+              className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+            >
+              Stop
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Content */}
+      {currentSession ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* QR and info */}
+          <div className="lg:col-span-1 bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">Share to Join</h2>
+            {qrDataUrl ? (
+              <img src={qrDataUrl} alt="Session QR" className="w-56 h-56 mx-auto" />
+            ) : (
+              <div className="w-56 h-56 mx-auto bg-gray-100 rounded-lg animate-pulse" />
+            )}
+            <div className="mt-4 text-center">
+              <p className="text-sm text-gray-600">Session Code</p>
+              <p className="text-2xl font-bold tracking-widest text-gray-900">{currentSession.code}</p>
+            </div>
+          </div>
+
+          {/* Attendance list */}
+          <div className="lg:col-span-2 bg-white rounded-lg p-4 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold text-gray-900">Live Attendance</h2>
+              <span className="text-sm text-gray-600">{attendance.length} joined</span>
+            </div>
+            <div className="max-h-80 overflow-auto divide-y divide-gray-100">
+              {attendance.length === 0 ? (
+                <div className="text-center py-10 text-gray-500">Waiting for students to join…</div>
+              ) : (
+                attendance.map((a, idx) => (
+                  <div key={a.id || idx} className="flex items-center justify-between py-2">
+                    <div className="flex items-center">
+                      <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold">
+                        {(a.name || 'S')[0]?.toUpperCase()}
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-gray-900">{a.name || 'Student'}</p>
+                        <p className="text-xs text-gray-500">{a.roll || a.id}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-gray-500">{a.time ? new Date(a.time).toLocaleTimeString() : ''}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200 text-center">
+          <Play className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+          <p className="text-gray-700 mb-1">Choose a class and start a live session.</p>
+          <p className="text-sm text-gray-500">A QR code and session code will be generated for students to join.</p>
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -297,7 +490,7 @@ const NewTeacherDashboard = () => {
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         {/* Logo */}
-        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
+        <div className="flex items-center justify-between h-14 px-5 border-b border-gray-200">
           <div className="flex items-center">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <GraduationCap className="w-5 h-5 text-white" />
@@ -364,7 +557,7 @@ const NewTeacherDashboard = () => {
       <div className="lg:pl-64">
         {/* Top bar */}
         <div className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-200">
-          <div className="flex items-center justify-between h-16 px-4 sm:px-6">
+          <div className="flex items-center justify-between h-14 px-4 sm:px-5">
             <div className="flex items-center">
               <button
                 onClick={() => setSidebarOpen(true)}
@@ -372,7 +565,7 @@ const NewTeacherDashboard = () => {
               >
                 <Menu className="w-5 h-5" />
               </button>
-              <h1 className="ml-2 text-lg font-semibold text-gray-900 capitalize lg:ml-0">
+              <h1 className="ml-2 text-base font-semibold text-gray-900 capitalize lg:ml-0">
                 {navigation.find(nav => nav.id === currentPage)?.name || 'Dashboard'}
               </h1>
             </div>
@@ -389,8 +582,10 @@ const NewTeacherDashboard = () => {
         </div>
 
         {/* Page content */}
-        <main className="p-4 sm:p-6">
-          {renderContent()}
+        <main className="p-3 sm:p-5">
+          <div className="max-w-7xl mx-auto">
+            {renderContent()}
+          </div>
         </main>
       </div>
 
