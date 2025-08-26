@@ -114,7 +114,7 @@ const DashboardLayout = ({ children, currentPage, onNavigate, user, onLogout }) 
       <div className="lg:pl-72">
         {/* Premium Top bar */}
         <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-white/20 shadow-sm">
-          <div className="flex items-center justify-between h-20 px-6 sm:px-8">
+          <div className="flex items-center justify-between h-16 px-4 sm:px-6">
             <div className="flex items-center">
               <button
                 onClick={() => setSidebarOpen(true)}
@@ -214,7 +214,7 @@ const DashboardLayout = ({ children, currentPage, onNavigate, user, onLogout }) 
         </div>
 
         {/* Page content */}
-        <main className="p-6 sm:p-8">
+        <main className="p-4 sm:p-6">
           {children}
         </main>
       </div>
