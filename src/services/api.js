@@ -106,3 +106,62 @@ export const authStorage = {
     localStorage.removeItem('qroll_user');
   }
 };
+
+// API object for general requests
+const api = {
+  get: async (endpoint) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('API GET error:', error);
+      throw error;
+    }
+  },
+
+  post: async (endpoint, data) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('API POST error:', error);
+      throw error;
+    }
+  },
+
+  put: async (endpoint, data) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('API PUT error:', error);
+      throw error;
+    }
+  },
+
+  delete: async (endpoint) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      return await handleResponse(response);
+    } catch (error) {
+      console.error('API DELETE error:', error);
+      throw error;
+    }
+  }
+};
+
+export default api;
